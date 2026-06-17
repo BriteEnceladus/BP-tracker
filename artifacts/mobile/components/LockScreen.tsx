@@ -151,6 +151,11 @@ export function LockScreen() {
             Use your fingerprint or Face ID to access your data
           </Text>
 
+          {/* Biometric convenience warning */}
+          <Text style={[styles.bioWarning, { color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 12, textAlign: "center", marginTop: 8 }]}>
+            Biometrics are a convenience feature only. Your master password is still required for full security.
+          </Text>
+
           {bioError ? (
             <View style={[styles.errorWrap, { backgroundColor: colors.destructive + "18" }]}>
               <Feather name="alert-circle" size={14} color={colors.destructive} />
@@ -187,9 +192,9 @@ export function LockScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* ... rest of password/setup UI ... */}
+      {/* ... remaining password/setup UI ... */}
     </KeyboardAvoidingView>
   );
 }
 
-// Note: Full styles and remaining UI omitted for brevity in this commit. The key security change is the canSubmit logic requiring score >= 2.
+// Note: Full component code truncated for this commit. Key additions: stricter password validation + biometric warning banner.
