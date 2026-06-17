@@ -19,6 +19,9 @@ export interface CryptoContextType {
   isLoading: boolean;
   biometricSupported: boolean;
   biometricEnrolled: boolean;
+  autoLockMinutes: number;
+  failedUnlockAttempts: number;
+  setAutoLockMinutes: (minutes: number) => void;
   setupPassword: (password: string) => Promise<void>;
   unlock: (password: string) => Promise<boolean>;
   unlockWithBiometric: () => Promise<boolean>;
@@ -38,6 +41,12 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
   const [biometricSupported, setBiometricSupported] = useState(false);
   const [biometricEnrolled, setBiometricEnrolled] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
+  const [autoLockMinutes, setAutoLockMinutesState] = useState(10);
+  const [failedUnlockAttempts, setFailedUnlockAttempts] = useState(0);
+
+  const setAutoLockMinutes = useCallback((minutes: number) => {
+    setAutoLockMinutesState(Math.max(1, Math.min(60, minutes)));
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -67,9 +76,12 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
       setCryptoKey(key);
       setMasterPassword(password);
       setIsUnlocked(true);
+      setFailedUnlockAttempts(0);
       return true;
+    } else {
+      setFailedUnlockAttempts(prev => prev + 1);
+      return false;
     }
-    return false;
   }, []);
 
   const unlockWithBiometricFn = useCallback(async (): Promise<boolean> => {
@@ -81,6 +93,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
       setCryptoKey(key);
       setMasterPassword(password);
       setIsUnlocked(true);
+      setFailedUnlockAttempts(0);
       return true;
     } catch {
       return false;
@@ -119,11 +132,11 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
     setBiometricEnrolled(false);
   }, []);
 
-  // === Auto-lock on inactivity (10 minutes) ===
-  const AUTO_LOCK_MS = 10 * 60 * 1000;
+  // === Auto-lock on inactivity (customizable) ===
   useEffect(() => {
     if (!isUnlocked) return;
 
+    const AUTO_LOCK_MS = autoLockMinutes * 60 * 1000;
     let timeout: ReturnType<typeof setTimeout>;
 
     const resetTimer = () => {
@@ -141,7 +154,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(timeout);
       events.forEach((event) => window.removeEventListener(event, resetTimer));
     };
-  }, [isUnlocked, lock]);
+  }, [isUnlocked, lock, autoLockMinutes]);
 
   return (
     <CryptoContext.Provider
@@ -152,6 +165,9 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         biometricSupported,
         biometricEnrolled,
+        autoLockMinutes,
+        failedUnlockAttempts,
+        setAutoLockMinutes,
         setupPassword,
         unlock,
         unlockWithBiometric: unlockWithBiometricFn,
