@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { liveQuery } from 'dexie';
 import { db, BPReading } from '../src/db';
 
 interface BPContextType {
@@ -7,7 +8,6 @@ interface BPContextType {
   addReading: (reading: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateReading: (id: number, updates: Partial<BPReading>) => Promise<void>;
   deleteReading: (id: number) => Promise<void>;
-  refreshReadings: () => Promise<void>;
 }
 
 const BPContext = createContext<BPContextType | undefined>(undefined);
@@ -16,20 +16,22 @@ export function BPProvider({ children }: { children: ReactNode }) {
   const [readings, setReadings] = useState<BPReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load readings from Dexie on mount
-  const loadReadings = async () => {
-    try {
-      const allReadings = await db.readings.orderBy('timestamp').reverse().toArray();
-      setReadings(allReadings);
-    } catch (error) {
-      console.error('Failed to load readings:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Use Dexie's liveQuery for automatic reactive updates
   useEffect(() => {
-    loadReadings();
+    const subscription = liveQuery(() =>
+      db.readings.orderBy('timestamp').reverse().toArray()
+    ).subscribe({
+      next: (result) => {
+        setReadings(result);
+        setIsLoading(false);
+      },
+      error: (err) => {
+        console.error('Dexie liveQuery error:', err);
+        setIsLoading(false);
+      },
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const addReading = async (readingData: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -42,7 +44,7 @@ export function BPProvider({ children }: { children: ReactNode }) {
 
     try {
       await db.readings.add(newReading);
-      await loadReadings(); // Refresh state
+      // No manual refresh needed - liveQuery handles reactivity automatically
     } catch (error) {
       console.error('Failed to add reading:', error);
       throw error;
@@ -61,7 +63,7 @@ export function BPProvider({ children }: { children: ReactNode }) {
       };
 
       await db.readings.put(updated);
-      await loadReadings();
+      // liveQuery automatically updates all subscribed components
     } catch (error) {
       console.error('Failed to update reading:', error);
       throw error;
@@ -71,15 +73,11 @@ export function BPProvider({ children }: { children: ReactNode }) {
   const deleteReading = async (id: number) => {
     try {
       await db.readings.delete(id);
-      await loadReadings();
+      // liveQuery handles UI updates automatically
     } catch (error) {
       console.error('Failed to delete reading:', error);
       throw error;
     }
-  };
-
-  const refreshReadings = async () => {
-    await loadReadings();
   };
 
   return (
@@ -90,7 +88,6 @@ export function BPProvider({ children }: { children: ReactNode }) {
         addReading,
         updateReading,
         deleteReading,
-        refreshReadings,
       }}
     >
       {children}
