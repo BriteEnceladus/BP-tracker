@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,60 +17,56 @@ import { BPChart } from "@/components/BPChart";
 import { StatCard } from "@/components/StatCard";
 import {
   getBPCategory,
-  getCategoryLabel,
-  getAverages,
   getReadingsForDays,
+  getAverages,
 } from "@/utils/bpUtils";
-
-type Range = 7 | 30 | 0;
 
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { readings, isLoading } = useBP();
-  const [range, setRange] = useState<Range>(7);
 
-  const sortedReadings = useMemo(
-    () => [...readings].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [readings]
-  );
+  const sortedReadings = useMemo(() => {
+    return [...readings].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }, [readings]);
 
   const latest = sortedReadings[0] ?? null;
 
-  const filteredReadings = useMemo(() => {
-    if (range === 0) return readings;
-    return getReadingsForDays(readings, range);
-  }, [readings, range]);
+  // Last 7 days for stats and chart
+  const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
+  const averages = useMemo(() => getAverages(last7Days), [last7Days]);
 
-  const averages = useMemo(() => getAverages(filteredReadings), [filteredReadings]);
+  // Recent readings (last 5)
+  const recentReadings = sortedReadings.slice(0, 5);
 
-  const latestCategory = latest ? getBPCategory(latest.systolic, latest.diastolic) : null;
-
-  // Simple upward trend detection (last 3 readings)
+  // Trend alert
   const trendAlert = useMemo(() => {
     if (sortedReadings.length < 3) return null;
     const recent = sortedReadings.slice(0, 3).reverse();
-    const systolicTrend = recent[2].systolic - recent[0].systolic;
-    const diastolicTrend = recent[2].diastolic - recent[0].diastolic;
+    const sysTrend = recent[2].systolic - recent[0].systolic;
+    const diaTrend = recent[2].diastolic - recent[0].diastolic;
 
-    if (systolicTrend >= 10 || diastolicTrend >= 5) {
-      return "Your BP readings have been trending upward recently. Consider consulting your doctor.";
+    if (sysTrend >= 10 || diaTrend >= 5) {
+      return "Readings trending upward. Consider consulting your doctor.";
     }
     return null;
   }, [sortedReadings]);
 
-  const categoryColorMap = {
-    normal: colors.normal,
-    elevated: colors.elevated,
-    stage1: colors.stage1,
-    stage2: colors.stage2,
-    crisis: colors.crisis,
-  };
-
   const webTopPadding = Platform.OS === "web" ? 67 : 0;
+
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Text style={{ color: colors.mutedForeground }}>Loading your data...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View
         style={[
           styles.header,
@@ -83,62 +78,205 @@ export default function DashboardScreen() {
         ]}
       >
         <View>
-          <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Your Health Dashboard
+          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
+            Good morning
           </Text>
-          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             BP Tracker
           </Text>
         </View>
         <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+          style={[styles.addBtn, { backgroundColor: colors.primary }]}
           onPress={() => router.push("/(tabs)/log")}
-          activeOpacity={0.85}
         >
-          <Feather name="plus" size={20} color={colors.primaryForeground} />
+          <Feather name="plus" size={22} color={colors.primaryForeground} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          Platform.OS === "web" ? { paddingBottom: 34 + 84 } : { paddingBottom: 100 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
       >
+        {/* Trend Alert */}
         {trendAlert && (
-          <View style={[styles.trendAlert, { backgroundColor: colors.crisis + "15", borderColor: colors.crisis }]}>
+          <View style={[styles.alert, { backgroundColor: colors.crisis + "20", borderColor: colors.crisis }]}>
             <Feather name="trending-up" size={18} color={colors.crisis} />
-            <Text style={[styles.trendText, { color: colors.foreground }]}>{trendAlert}</Text>
+            <Text style={[styles.alertText, { color: colors.foreground }]}>{trendAlert}</Text>
           </View>
         )}
 
-        {latest ? (
-          <View style={styles.latestSection}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              Latest Reading
-            </Text>
+        {/* Latest Reading */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Latest Reading</Text>
+          {latest ? (
             <BPCard reading={latest} />
-          </View>
-        ) : (
-          <View
-            style={[
-              styles.emptyHero,
-              { backgroundColor: colors.card, borderRadius: colors.radius, borderColor: colors.border },
-            ]}
-          >
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No readings yet</Text>
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Tap the + button to log your first blood pressure reading.
-            </Text>
+          ) : (
+            <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={{ color: colors.mutedForeground }}>No readings yet</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/log")}>
+                <Text style={{ color: colors.primary, marginTop: 8 }}>Log your first reading →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Stats */}
+        {last7Days.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Last 7 Days</Text>
+            <View style={styles.statsRow}>
+              <StatCard
+                label="Avg Systolic"
+                value={averages.avgSystolic || "--"}
+                unit="mmHg"
+              />
+              <StatCard
+                label="Avg Diastolic"
+                value={averages.avgDiastolic || "--"}
+                unit="mmHg"
+              />
+              <StatCard
+                label="Readings"
+                value={last7Days.length}
+              />
+            </View>
           </View>
         )}
 
-        {/* Rest of dashboard content... */}
+        {/* Chart */}
+        {last7Days.length > 1 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Trend (Last 7 Days)</Text>
+            <BPChart readings={last7Days} />
+          </View>
+        )}
+
+        {/* Recent Readings */}
+        {recentReadings.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent Readings</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/history")}>
+                <Text style={{ color: colors.primary }}>See all →</Text>
+              </TouchableOpacity>
+            </View>
+
+            {recentReadings.map((reading) => (
+              <TouchableOpacity
+                key={reading.id || reading.timestamp}
+                onPress={() => router.push({
+                  pathname: "/(tabs)/log",
+                  params: { id: reading.id?.toString() }
+                })}
+              >
+                <BPCard reading={reading} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {readings.length === 0 && (
+          <View style={styles.emptyState}>
+            <Feather name="activity" size={48} color={colors.mutedForeground} />
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              Start tracking your health
+            </Text>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              Log your first blood pressure reading to see insights here.
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
 }
 
-// Note: Full styles and remaining dashboard code truncated for this commit.
-// Key addition: BP Trend Alert banner when readings are trending upward.
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  greeting: {
+    fontSize: 14,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+  },
+  addBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  alert: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  alertText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  emptyCard: {
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  emptyState: {
+    alignItems: "center",
+    padding: 40,
+    marginTop: 40,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginTop: 16,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 20,
+  },
+});
