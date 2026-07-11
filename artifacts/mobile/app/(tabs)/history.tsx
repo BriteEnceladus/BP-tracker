@@ -5,6 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useColors } from '../../hooks/useColors';
@@ -23,7 +24,7 @@ const ranges: { label: string; value: Range }[] = [
 
 export default function HistoryScreen() {
   const colors = useColors();
-  const { readings, isLoading } = useBP();
+  const { readings, isLoading, deleteReading } = useBP();
   const [range, setRange] = useState<Range>(30);
 
   const filteredReadings = getReadingsForDays(readings, range);
@@ -34,6 +35,27 @@ export default function HistoryScreen() {
 
   const handleEdit = (id: number) => {
     router.push({ pathname: '/(tabs)/log', params: { id: id.toString() } });
+  };
+
+  const handleDelete = (id: number, timestamp: string) => {
+    Alert.alert(
+      'Delete Reading?',
+      `Are you sure you want to delete the reading from ${new Date(timestamp).toLocaleDateString()}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteReading(id);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete reading');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (isLoading) {
@@ -48,22 +70,22 @@ export default function HistoryScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>History</Text>
-        
+
         <View style={styles.filterRow}>
           {ranges.map((r) => (
             <TouchableOpacity
               key={r.value}
               style={[
                 styles.filterChip,
-                { 
+                {
                   backgroundColor: range === r.value ? colors.primary : colors.card,
                   borderColor: colors.border,
-                }
+                },
               ]}
               onPress={() => setRange(r.value)}
             >
-              <Text 
-                style={{ 
+              <Text
+                style={{
                   color: range === r.value ? colors.primaryForeground : colors.foreground,
                   fontSize: 13,
                 }}
@@ -86,7 +108,10 @@ export default function HistoryScreen() {
           data={sortedReadings}
           keyExtractor={(item) => item.id?.toString() || item.timestamp}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => item.id && handleEdit(item.id)}>
+            <TouchableOpacity
+              onPress={() => item.id && handleEdit(item.id)}
+              onLongPress={() => item.id && handleDelete(item.id, item.timestamp)}
+            >
               <BPCard reading={item} />
             </TouchableOpacity>
           )}
