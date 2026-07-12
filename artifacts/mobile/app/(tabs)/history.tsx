@@ -15,6 +15,7 @@ import { getReadingsForDays } from '../../utils/bpUtils';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Feather } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler/Swipeable';
 
 type Range = 7 | 30 | 90 | 0;
 
@@ -92,7 +93,6 @@ export default function HistoryScreen() {
           onPress: async () => {
             try {
               await deleteReading(id);
-              router.back();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete reading');
             }
@@ -101,6 +101,22 @@ export default function HistoryScreen() {
       ]
     );
   };
+
+  const renderRightActions = (item: any) => (
+    <TouchableOpacity
+      style={{
+        backgroundColor: colors.crisis,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 80,
+        borderTopRightRadius: 12,
+        borderBottomRightRadius: 12,
+      }}
+      onPress={() => item.id && handleDelete(item.id, item.timestamp)}
+    >
+      <Feather name="trash-2" size={24} color="#FFFFFF" />
+    </TouchableOpacity>
+  );
 
   if (isLoading) {
     return (
@@ -155,12 +171,13 @@ export default function HistoryScreen() {
           data={sortedReadings}
           keyExtractor={(item) => item.id?.toString() || item.timestamp}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => item.id && router.push(`/reading/${item.id}`)}
-              onLongPress={() => item.id && handleDelete(item.id, item.timestamp)}
-            >
-              <BPCard reading={item} />
-            </TouchableOpacity>
+            <Swipeable renderRightActions={() => renderRightActions(item)}>
+              <TouchableOpacity
+                onPress={() => item.id && router.push(`/reading/${item.id}`)}
+              >
+                <BPCard reading={item} />
+              </TouchableOpacity>
+            </Swipeable>
           )}
           contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
