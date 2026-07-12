@@ -9,11 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
 import { BPReading } from '../../src/db';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function LogScreen() {
   const colors = useColors();
@@ -29,20 +31,40 @@ export default function LogScreen() {
   const [heartRate, setHeartRate] = useState(editingReading?.heartRate?.toString() || '');
   const [notes, setNotes] = useState(editingReading?.notes || '');
   const [medicationTaken, setMedicationTaken] = useState(editingReading?.medicationTaken || false);
+  const [date, setDate] = useState(
+    editingReading ? new Date(editingReading.timestamp) : new Date()
+  );
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const isEditing = !!editingReading;
 
   const handleSave = async () => {
-    if (!systolic || !diastolic) {
-      alert('Systolic and Diastolic are required');
+    const sysNum = parseInt(systolic);
+    const diaNum = parseInt(diastolic);
+    const hrNum = heartRate ? parseInt(heartRate) : null;
+
+    const errors: string[] = [];
+
+    if (!systolic || isNaN(sysNum) || sysNum < 50 || sysNum > 300) {
+      errors.push('Systolic must be a number between 50 and 300 mmHg');
+    }
+    if (!diastolic || isNaN(diaNum) || diaNum < 30 || diaNum > 200) {
+      errors.push('Diastolic must be a number between 30 and 200 mmHg');
+    }
+    if (heartRate && (isNaN(hrNum!) || hrNum! < 30 || hrNum! > 250)) {
+      errors.push('Heart rate must be between 30 and 250 bpm if provided');
+    }
+
+    if (errors.length > 0) {
+      Alert.alert('Invalid Input', errors.join('\n'));
       return;
     }
 
-    const readingData = {
-      timestamp: new Date().toISOString(),
-      systolic: parseInt(systolic),
-      diastolic: parseInt(diastolic),
-      heartRate: heartRate ? parseInt(heartRate) : undefined,
+    const readingData: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'> = {
+      timestamp: date.toISOString(),
+      systolic: sysNum,
+      diastolic: diaNum,
+      heartRate: hrNum ?? undefined,
       notes: notes.trim() || undefined,
       medicationTaken,
     };
@@ -55,7 +77,7 @@ export default function LogScreen() {
       }
       router.back();
     } catch (error) {
-      alert('Failed to save reading');
+      Alert.alert('Save Failed', 'Unable to save the reading. Please try again.');
     }
   };
 
@@ -70,7 +92,33 @@ export default function LogScreen() {
         </Text>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.mutedForeground }]}>Systolic (mmHg)</Text>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>Date & Time</Text>
+          <TouchableOpacity
+            style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, justifyContent: 'center' }]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={{ color: colors.foreground, fontSize: 16 }}>
+              {date.toLocaleString()}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="datetime"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(Platform.OS === 'ios');
+              if (selectedDate) {
+                setDate(selectedDate);
+              }
+            }}
+          />
+        )}
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>Systolic (mmHg) *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border }]}
             value={systolic}
@@ -82,7 +130,7 @@ export default function LogScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.mutedForeground }]}>Diastolic (mmHg)</Text>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>Diastolic (mmHg) *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border }]}
             value={diastolic}
