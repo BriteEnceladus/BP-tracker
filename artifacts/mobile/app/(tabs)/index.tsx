@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -20,6 +21,16 @@ import {
   getReadingsForDays,
   getAverages,
 } from "@/utils/bpUtils";
+import * as Notifications from 'expo-notifications';
+
+// Set up notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function DashboardScreen() {
   const colors = useColors();
@@ -56,6 +67,35 @@ export default function DashboardScreen() {
 
   const webTopPadding = Platform.OS === "web" ? 67 : 0;
 
+  const setDailyReminder = async () => {
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please enable notifications to set reminders.');
+        return;
+      }
+
+      // Schedule daily reminder at 8:00 AM (customize as needed)
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Time to log your BP",
+          body: "Don't forget to record your blood pressure and heart rate today.",
+          sound: true,
+        },
+        trigger: {
+          hour: 8,
+          minute: 0,
+          repeats: true,
+        },
+      });
+
+      Alert.alert('Reminder Set', 'You will get a daily notification at 8:00 AM.');
+    } catch (error) {
+      Alert.alert('Error', 'Could not set the reminder.');
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -85,12 +125,20 @@ export default function DashboardScreen() {
             BP Tracker
           </Text>
         </View>
-        <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          onPress={() => router.push("/(tabs)/log")}
-        >
-          <Feather name="plus" size={22} color={colors.primaryForeground} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: colors.card }]}
+            onPress={setDailyReminder}
+          >
+            <Feather name="bell" size={20} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: colors.primary }]}
+            onPress={() => router.push("/(tabs)/log")}
+          >
+            <Feather name="plus" size={22} color={colors.primaryForeground} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -226,6 +274,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
   },
