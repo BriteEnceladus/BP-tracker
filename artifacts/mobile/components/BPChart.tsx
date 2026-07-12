@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import Svg, { Line, Polyline, Circle } from 'react-native-svg';
 import { useColors } from '../hooks/useColors';
 import { BPReading } from '../src/db';
@@ -7,9 +7,10 @@ import { BPReading } from '../src/db';
 interface BPChartProps {
   readings: BPReading[];
   height?: number;
+  onPointPress?: (reading: BPReading) => void;
 }
 
-export function BPChart({ readings, height = 220 }: BPChartProps) {
+export function BPChart({ readings, height = 220, onPointPress }: BPChartProps) {
   const colors = useColors();
   const width = Dimensions.get('window').width - 60;
 
@@ -51,51 +52,76 @@ export function BPChart({ readings, height = 220 }: BPChartProps) {
 
   return (
     <View style={[styles.container, { height, backgroundColor: colors.card }]}>
-      <Svg width={width} height={height - 20}>
-        {/* Grid lines */}
-        {[0.25, 0.5, 0.75].map((p, idx) => {
-          const y = 30 + p * (height - 70);
+      <View style={{ position: 'relative' }}>
+        <Svg width={width} height={height - 20}>
+          {/* Grid lines */}
+          {[0.25, 0.5, 0.75].map((p, idx) => {
+            const y = 30 + p * (height - 70);
+            return (
+              <Line
+                key={idx}
+                x1="20"
+                y1={y}
+                x2={width - 20}
+                y2={y}
+                stroke={colors.border}
+                strokeWidth="1"
+              />
+            );
+          })}
+
+          {/* Systolic line (red) */}
+          <Polyline
+            points={sysPoints}
+            fill="none"
+            stroke={colors.crisis}
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+
+          {/* Diastolic line (blue) */}
+          <Polyline
+            points={diaPoints}
+            fill="none"
+            stroke={colors.primary}
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+
+          {/* Data points */}
+          {sorted.map((r, i) => (
+            <React.Fragment key={i}>
+              <Circle cx={getX(i)} cy={getY(r.systolic)} r="4" fill={colors.crisis} />
+              <Circle cx={getX(i)} cy={getY(r.diastolic)} r="4" fill={colors.primary} />
+            </React.Fragment>
+          ))}
+        </Svg>
+
+        {/* Tap areas for interactivity */}
+        {onPointPress && sorted.map((r, i) => {
+          const x = getX(i) - 20;
+          const ySys = getY(r.systolic) - 20;
           return (
-            <Line
-              key={idx}
-              x1="20"
-              y1={y}
-              x2={width - 20}
-              y2={y}
-              stroke={colors.border}
-              strokeWidth="1"
-            />
+            <TouchableOpacity
+              key={i}
+              style={{
+                position: 'absolute',
+                left: x,
+                top: ySys,
+                width: 40,
+                height: 40,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={() => onPointPress(r)}
+            >
+              <View style={{ width: 24, height: 24 }} />
+            </TouchableOpacity>
           );
         })}
-
-        {/* Systolic line (red) */}
-        <Polyline
-          points={sysPoints}
-          fill="none"
-          stroke={colors.crisis}
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-
-        {/* Diastolic line (blue) */}
-        <Polyline
-          points={diaPoints}
-          fill="none"
-          stroke={colors.primary}
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-
-        {/* Data points */}
-        {sorted.map((r, i) => (
-          <React.Fragment key={i}>
-            <Circle cx={getX(i)} cy={getY(r.systolic)} r="4" fill={colors.crisis} />
-            <Circle cx={getX(i)} cy={getY(r.diastolic)} r="4" fill={colors.primary} />
-          </React.Fragment>
-        ))}
-      </Svg>
+      </View>
 
       {/* Legend */}
       <View style={styles.legend}>
