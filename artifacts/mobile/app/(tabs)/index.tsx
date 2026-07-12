@@ -147,7 +147,14 @@ export default function DashboardScreen() {
         {last7Days.length > 1 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Trend (Last 7 Days)</Text>
-            <BPChart readings={last7Days} />
+            <BPChart 
+              readings={last7Days} 
+              onPointPress={(reading) => {
+                if (reading.id) {
+                  router.push(`/reading/${reading.id}`);
+                }
+              }} 
+            />
           </View>
         )}
 
