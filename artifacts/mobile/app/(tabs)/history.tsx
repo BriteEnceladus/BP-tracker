@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -28,8 +28,10 @@ const ranges: { label: string; value: Range }[] = [
 
 export default function HistoryScreen() {
   const colors = useColors();
-  const { readings, isLoading, deleteReading } = useBP();
+  const { readings, isLoading, deleteReading, addReading } = useBP();
   const [range, setRange] = useState<Range>(30);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<any>(null);
+  const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const filteredReadings = getReadingsForDays(readings, range);
 
@@ -82,25 +84,53 @@ export default function HistoryScreen() {
   };
 
   const handleDelete = (id: number, timestamp: string) => {
-    Alert.alert(
-      'Delete Reading?',
-      `Delete the reading from ${new Date(timestamp).toLocaleDateString()}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteReading(id);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete reading');
-            }
-          },
-        },
-      ]
-    );
+    const readingToDelete = sortedReadings.find(r => r.id === id);
+    if (!readingToDelete) return;
+
+    deleteReading(id).catch(() => {
+      Alert.alert('Error', 'Failed to delete reading');
+    });
+
+    // Set up undo
+    setRecentlyDeleted(readingToDelete);
+    if (undoTimeout) clearTimeout(undoTimeout);
+
+    const timeout = setTimeout(() => {
+      setRecentlyDeleted(null);
+    }, 15000); // 15 seconds
+
+    setUndoTimeout(timeout);
   };
+
+  const handleUndo = async () => {
+    if (!recentlyDeleted) return;
+
+    if (undoTimeout) {
+      clearTimeout(undoTimeout);
+      setUndoTimeout(null);
+    }
+
+    try {
+      await addReading({
+        timestamp: recentlyDeleted.timestamp,
+        systolic: recentlyDeleted.systolic,
+        diastolic: recentlyDeleted.diastolic,
+        heartRate: recentlyDeleted.heartRate,
+        notes: recentlyDeleted.notes,
+        medicationTaken: recentlyDeleted.medicationTaken,
+      });
+      setRecentlyDeleted(null);
+    } catch (error) {
+      Alert.alert('Undo Failed', 'Could not restore the reading.');
+    }
+  };
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (undoTimeout) clearTimeout(undoTimeout);
+    };
+  }, [undoTimeout]);
 
   const renderRightActions = (item: any) => (
     <TouchableOpacity
@@ -183,6 +213,18 @@ export default function HistoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Undo Banner */}
+      {recentlyDeleted && (
+        <View style={[styles.undoBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={{ color: colors.foreground, flex: 1 }}>
+            Reading deleted
+          </Text>
+          <TouchableOpacity onPress={handleUndo} style={styles.undoButton}>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>Undo</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -226,5 +268,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+  },
+  undoBanner: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  undoButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
 });
