@@ -1,7 +1,6 @@
-/**
- * This file is intentionally left as a re-export so that TypeScript and
- * non-platform-aware imports continue to work.
- * Runtime resolution uses CryptoContext.native.tsx / CryptoContext.web.tsx.
- */
-export { CryptoProvider, useCrypto } from './CryptoContext.native';
-export type { CryptoContextType } from './CryptoContext.native';
+// This file has been removed intentionally.
+// Use platform-specific files:
+//   - CryptoContext.web.tsx
+//   - CryptoContext.native.tsx
+// Metro will automatically pick the correct one.
+export {};
