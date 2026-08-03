@@ -24,26 +24,28 @@ export function StatCard({ label, value, unit }: StatCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 12,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     borderWidth: 1,
     flex: 1,
     marginHorizontal: 4,
   },
   label: {
     fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 6,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginTop: 4,
   },
   value: {
-    fontSize: 20,
+    fontSize: 24,          // Larger for bold data feel
     fontWeight: '700',
   },
   unit: {
-    fontSize: 12,
+    fontSize: 13,
     marginLeft: 4,
   },
 });
