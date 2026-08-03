@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
 import { BPCard } from '../../components/BPCard';
-import { getReadingsForDays } from '../../utils/bpUtils';
+import { BPChart } from '../../components/BPChart';
+import { StatCard } from '../../components/StatCard';
+import { getReadingsForDays, getAverages } from '../../utils/bpUtils';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Feather } from '@expo/vector-icons';
@@ -20,9 +23,9 @@ import { Swipeable } from 'react-native-gesture-handler/Swipeable';
 type Range = 7 | 30 | 90 | 0;
 
 const ranges: { label: string; value: Range }[] = [
-  { label: '7 Days', value: 7 },
-  { label: '30 Days', value: 30 },
-  { label: '90 Days', value: 90 },
+  { label: '7d', value: 7 },
+  { label: '30d', value: 30 },
+  { label: '90d', value: 90 },
   { label: 'All', value: 0 },
 ];
 
@@ -33,11 +36,17 @@ export default function HistoryScreen() {
   const [recentlyDeleted, setRecentlyDeleted] = useState<any>(null);
   const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  const filteredReadings = getReadingsForDays(readings, range);
+  const filteredReadings = useMemo(() => getReadingsForDays(readings, range), [readings, range]);
 
-  const sortedReadings = [...filteredReadings].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  const sortedReadings = useMemo(
+    () =>
+      [...filteredReadings].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      ),
+    [filteredReadings]
   );
+
+  const averages = useMemo(() => getAverages(filteredReadings), [filteredReadings]);
 
   const exportToCSV = async () => {
     if (sortedReadings.length === 0) {
@@ -74,7 +83,7 @@ export default function HistoryScreen() {
       } else {
         Alert.alert(
           'Export Complete',
-          `CSV file saved to your device at:\n${fileUri}\n\nYou can open it with any spreadsheet app.`
+          `CSV file saved to your device at:\n${fileUri}`
         );
       }
     } catch (error) {
@@ -83,21 +92,20 @@ export default function HistoryScreen() {
     }
   };
 
-  const handleDelete = (id: number, timestamp: string) => {
-    const readingToDelete = sortedReadings.find(r => r.id === id);
+  const handleDelete = (id: number) => {
+    const readingToDelete = sortedReadings.find((r) => r.id === id);
     if (!readingToDelete) return;
 
     deleteReading(id).catch(() => {
       Alert.alert('Error', 'Failed to delete reading');
     });
 
-    // Set up undo
     setRecentlyDeleted(readingToDelete);
     if (undoTimeout) clearTimeout(undoTimeout);
 
     const timeout = setTimeout(() => {
       setRecentlyDeleted(null);
-    }, 15000); // 15 seconds
+    }, 15000);
 
     setUndoTimeout(timeout);
   };
@@ -125,7 +133,6 @@ export default function HistoryScreen() {
     }
   };
 
-  // Cleanup timeout on unmount
   React.useEffect(() => {
     return () => {
       if (undoTimeout) clearTimeout(undoTimeout);
@@ -142,7 +149,7 @@ export default function HistoryScreen() {
         borderTopRightRadius: 12,
         borderBottomRightRadius: 12,
       }}
-      onPress={() => item.id && handleDelete(item.id, item.timestamp)}
+      onPress={() => item.id && handleDelete(item.id)}
     >
       <Feather name="trash-2" size={24} color="#FFFFFF" />
     </TouchableOpacity>
@@ -165,6 +172,7 @@ export default function HistoryScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Filter chips */}
       <View style={styles.filterRow}>
         {ranges.map((r) => (
           <TouchableOpacity
@@ -182,6 +190,7 @@ export default function HistoryScreen() {
               style={{
                 color: range === r.value ? colors.primaryForeground : colors.foreground,
                 fontSize: 13,
+                fontWeight: range === r.value ? '600' : '400',
               }}
             >
               {r.label}
@@ -200,6 +209,29 @@ export default function HistoryScreen() {
         <FlatList
           data={sortedReadings}
           keyExtractor={(item) => item.id?.toString() || item.timestamp}
+          ListHeaderComponent={
+            <View style={{ marginBottom: 16 }}>
+              {/* Bold analytics chart */}
+              {sortedReadings.length > 1 && (
+                <View style={{ marginBottom: 16 }}>
+                  <BPChart
+                    readings={filteredReadings}
+                    height={240}
+                    onPointPress={(reading) => {
+                      if (reading.id) router.push(`/reading/${reading.id}`);
+                    }}
+                  />
+                </View>
+              )}
+
+              {/* Stats summary for bold feel */}
+              <View style={styles.statsRow}>
+                <StatCard label="Avg Sys" value={averages.avgSystolic || '--'} unit="mmHg" />
+                <StatCard label="Avg Dia" value={averages.avgDiastolic || '--'} unit="mmHg" />
+                <StatCard label="Readings" value={sortedReadings.length} />
+              </View>
+            </View>
+          }
           renderItem={({ item }) => (
             <Swipeable renderRightActions={() => renderRightActions(item)}>
               <TouchableOpacity
@@ -209,7 +241,7 @@ export default function HistoryScreen() {
               </TouchableOpacity>
             </Swipeable>
           )}
-          contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -217,9 +249,7 @@ export default function HistoryScreen() {
       {/* Undo Banner */}
       {recentlyDeleted && (
         <View style={[styles.undoBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={{ color: colors.foreground, flex: 1 }}>
-            Reading deleted
-          </Text>
+          <Text style={{ color: colors.foreground, flex: 1 }}>Reading deleted</Text>
           <TouchableOpacity onPress={handleUndo} style={styles.undoButton}>
             <Text style={{ color: colors.primary, fontWeight: '600' }}>Undo</Text>
           </TouchableOpacity>
@@ -247,16 +277,20 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
   filterChip: {
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
   },
   center: {
     flex: 1,

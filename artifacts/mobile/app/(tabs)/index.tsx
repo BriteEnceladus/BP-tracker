@@ -23,7 +23,6 @@ import {
 } from "@/utils/bpUtils";
 import * as Notifications from 'expo-notifications';
 
-// Set up notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -45,14 +44,11 @@ export default function DashboardScreen() {
 
   const latest = sortedReadings[0] ?? null;
 
-  // Last 7 days for stats and chart
   const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
   const averages = useMemo(() => getAverages(last7Days), [last7Days]);
 
-  // Recent readings (last 5)
   const recentReadings = sortedReadings.slice(0, 5);
 
-  // Trend alert
   const trendAlert = useMemo(() => {
     if (sortedReadings.length < 3) return null;
     const recent = sortedReadings.slice(0, 3).reverse();
@@ -75,7 +71,6 @@ export default function DashboardScreen() {
         return;
       }
 
-      // Schedule daily reminder at 8:00 AM (customize as needed)
       await Notifications.cancelAllScheduledNotificationsAsync();
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -153,7 +148,7 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Latest Reading */}
+        {/* Latest Reading - Bold focus */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Latest Reading</Text>
           {latest ? (
@@ -162,13 +157,13 @@ export default function DashboardScreen() {
             <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={{ color: colors.mutedForeground }}>No readings yet</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/log")}>
-                <Text style={{ color: colors.primary, marginTop: 8 }}>Log your first reading →</Text>
+                <Text style={{ color: colors.primary, marginTop: 8, fontWeight: '600' }}>Log your first reading →</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* Stats */}
+        {/* Stats - Bold data row */}
         {last7Days.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Last 7 Days</Text>
@@ -191,12 +186,13 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Chart */}
+        {/* Chart - more prominent */}
         {last7Days.length > 1 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Trend (Last 7 Days)</Text>
             <BPChart 
               readings={last7Days} 
+              height={240}
               onPointPress={(reading) => {
                 if (reading.id) {
                   router.push(`/reading/${reading.id}`);
@@ -210,9 +206,9 @@ export default function DashboardScreen() {
         {recentReadings.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent Readings</Text>
+              <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>Recent Readings</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/history")}>
-                <Text style={{ color: colors.primary }}>See all →</Text>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>See all →</Text>
               </TouchableOpacity>
             </View>
 
@@ -304,7 +300,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
   },
   alert: {
     flexDirection: "row",
