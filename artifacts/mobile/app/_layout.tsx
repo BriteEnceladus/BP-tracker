@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Stack, router } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BPProvider } from '../context/BPContext';
+import { MedsProvider } from '../context/MedsContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -44,10 +45,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <BPProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          {showOnboarding && <Stack.Screen name="onboarding" />}
-          <Stack.Screen name="(tabs)" />
-        </Stack>
+        <MedsProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            {showOnboarding && <Stack.Screen name="onboarding" />}
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </MedsProvider>
       </BPProvider>
     </SafeAreaProvider>
   );
