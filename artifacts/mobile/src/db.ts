@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import Dexie, { Table } from 'dexie';
 
 export interface BPReading {
@@ -12,20 +13,24 @@ export interface BPReading {
   updatedAt?: string;
 }
 
+// ---------- Web only (Dexie / IndexedDB) ----------
 class BPTrackerDatabase extends Dexie {
   readings!: Table<BPReading, number>;
 
   constructor() {
     super('BPTrackerDB_v1');
     this.version(1).stores({
-      readings: '++id, timestamp, systolic, diastolic' // Primary key + indexes for common queries
+      readings: '++id, timestamp, systolic, diastolic',
     });
   }
 }
 
-export const db = new BPTrackerDatabase();
+// Only instantiate Dexie on web to avoid native crashes
+export const db =
+  Platform.OS === 'web' ? new BPTrackerDatabase() : (null as unknown as BPTrackerDatabase);
 
-// Optional: Clear database (useful during development)
 export async function clearAllData() {
-  await db.readings.clear();
+  if (Platform.OS === 'web' && db) {
+    await db.readings.clear();
+  }
 }
