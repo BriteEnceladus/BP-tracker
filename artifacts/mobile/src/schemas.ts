@@ -39,7 +39,6 @@ export const TimestampSchema = z
 
 /**
  * Core BPReading schema (for stored data).
- * Used for validation on load / after decryption.
  */
 export const BPReadingSchema = z.object({
   id: z.number().int().optional(),
@@ -55,10 +54,6 @@ export const BPReadingSchema = z.object({
 
 export type BPReading = z.infer<typeof BPReadingSchema>;
 
-/**
- * Input schema for creating/updating a reading (from forms).
- * Omits server-managed fields.
- */
 export const BPReadingInputSchema = z.object({
   timestamp: TimestampSchema,
   systolic: SystolicSchema,
@@ -71,34 +66,55 @@ export const BPReadingInputSchema = z.object({
 export type BPReadingInput = z.infer<typeof BPReadingInputSchema>;
 
 /**
- * Encrypted payload structure (versioned for future migrations).
+ * Medication schema
  */
+export const MedicationSchema = z.object({
+  id: z.number().int().optional(),
+  name: z.string().trim().min(1, 'Name is required').max(100),
+  dosage: z.string().trim().min(1, 'Dosage is required').max(50),
+  frequency: z.string().trim().min(1, 'Frequency is required').max(80),
+  startDate: z.string().optional(), // ISO date YYYY-MM-DD
+  notes: z.string().trim().max(300).optional(),
+  active: z.boolean().default(true),
+  createdAt: TimestampSchema.optional(),
+  updatedAt: TimestampSchema.optional(),
+});
+
+export type Medication = z.infer<typeof MedicationSchema>;
+
+export const MedicationInputSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(100),
+  dosage: z.string().trim().min(1, 'Dosage is required').max(50),
+  frequency: z.string().trim().min(1, 'Frequency is required').max(80),
+  startDate: z.string().optional(),
+  notes: z.string().trim().max(300).optional(),
+  active: z.boolean().default(true),
+});
+
+export type MedicationInput = z.infer<typeof MedicationInputSchema>;
+
 export const EncryptedPayloadSchema = z.object({
-  v: z.literal(1), // version
+  v: z.literal(1),
   iv: z.string().min(1),
   payload: z.string().min(1),
-  // Future: could add 'alg', 'kdf' etc. for key rotation
 });
 
 export type EncryptedPayload = z.infer<typeof EncryptedPayloadSchema>;
 
-/**
- * Password schema for setup/unlock.
- */
 export const PasswordSchema = z
   .string()
   .min(12, 'Password must be at least 12 characters')
   .max(128, 'Password is too long');
 
-/**
- * Helper to parse with nice errors for UI.
- */
-export function parseWithSchema<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; errors: string[] } {
+export function parseWithSchema<T>(
+  schema: z.ZodSchema<T>,
+  data: unknown
+): { success: true; data: T } | { success: false; errors: string[] } {
   const result = schema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data };
   }
-  const errors = result.error.issues.map(issue => {
+  const errors = result.error.issues.map((issue) => {
     const path = issue.path.length ? issue.path.join('.') : 'value';
     return `${path}: ${issue.message}`;
   });
