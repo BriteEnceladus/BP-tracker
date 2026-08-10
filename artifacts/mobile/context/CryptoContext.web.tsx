@@ -36,7 +36,7 @@ const CryptoContext = createContext<CryptoContextType | null>(null);
 export function CryptoProvider({ children }: { children: React.ReactNode }) {
   const [isSetup, setIsSetup] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [cryptoKey, setCryptoKey] = useState<CryptoKey | null>(null);
+  const [cryptoKey, setCryptoKey] = useState<SessionCryptoKey | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [biometricSupported, setBiometricSupported] = useState(false);
   const [biometricEnrolled, setBiometricEnrolled] = useState(false);

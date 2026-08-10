@@ -3,9 +3,9 @@
  * Matches the web API surface so LockScreen and the rest of the app work unchanged.
  *
  * Security notes:
- * - Master password is the root of trust (PBKDF2 100k + verifier).
+ * - Master password is the root of trust (PBKDF2 100k + verifier with real AES-GCM).
  * - Biometrics are convenience only (they only retrieve the password from SecureStore).
- * - Derived key lives only in React memory for the session.
+ * - Derived key (CryptoKey) lives only in React memory for the session.
  */
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -46,7 +46,7 @@ const CryptoContext = createContext<CryptoContextType | null>(null);
 export function CryptoProvider({ children }: { children: React.ReactNode }) {
   const [isSetup, setIsSetup] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [cryptoKey, setCryptoKey] = useState<string | null>(null);
+  const [cryptoKey, setCryptoKey] = useState<SessionCryptoKey | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [biometricSupported, setBiometricSupported] = useState(false);
   const [biometricEnrolled, setBiometricEnrolled] = useState(false);

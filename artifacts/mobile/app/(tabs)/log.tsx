@@ -16,14 +16,15 @@ import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
 import { BPReading } from '../../src/db';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { BPReadingInputSchema, parseWithSchema } from '../../src/schemas';
 
 export default function LogScreen() {
   const colors = useColors();
   const { readings, addReading, updateReading } = useBP();
   const params = useLocalSearchParams<{ id?: string }>();
 
-  const editingReading = params.id 
-    ? readings.find(r => r.id === Number(params.id)) 
+  const editingReading = params.id
+    ? readings.find(r => r.id === Number(params.id))
     : null;
 
   const [systolic, setSystolic] = useState(editingReading?.systolic?.toString() || '');
@@ -39,35 +40,27 @@ export default function LogScreen() {
   const isEditing = !!editingReading;
 
   const handleSave = async () => {
-    const sysNum = parseInt(systolic);
-    const diaNum = parseInt(diastolic);
-    const hrNum = heartRate ? parseInt(heartRate) : null;
+    const sysNum = parseInt(systolic, 10);
+    const diaNum = parseInt(diastolic, 10);
+    const hrNum = heartRate ? parseInt(heartRate, 10) : undefined;
 
-    const errors: string[] = [];
-
-    if (!systolic || isNaN(sysNum) || sysNum < 50 || sysNum > 300) {
-      errors.push('Systolic must be a number between 50 and 300 mmHg');
-    }
-    if (!diastolic || isNaN(diaNum) || diaNum < 30 || diaNum > 200) {
-      errors.push('Diastolic must be a number between 30 and 200 mmHg');
-    }
-    if (heartRate && (isNaN(hrNum!) || hrNum! < 30 || hrNum! > 250)) {
-      errors.push('Heart rate must be between 30 and 250 bpm if provided');
-    }
-
-    if (errors.length > 0) {
-      Alert.alert('Invalid Input', errors.join('\n'));
-      return;
-    }
-
-    const readingData: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'> = {
+    const input = {
       timestamp: date.toISOString(),
       systolic: sysNum,
       diastolic: diaNum,
-      heartRate: hrNum ?? undefined,
+      heartRate: hrNum,
       notes: notes.trim() || undefined,
       medicationTaken,
     };
+
+    const parsed = parseWithSchema(BPReadingInputSchema, input);
+
+    if (!parsed.success) {
+      Alert.alert('Invalid Input', parsed.errors.join('\n'));
+      return;
+    }
+
+    const readingData = parsed.data;
 
     try {
       if (isEditing && editingReading.id) {
@@ -82,7 +75,7 @@ export default function LogScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1, backgroundColor: colors.background }}
     >
@@ -175,8 +168,8 @@ export default function LogScreen() {
           />
         </View>
 
-        <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: colors.primary }]} 
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: colors.primary }]}
           onPress={handleSave}
         >
           <Text style={[styles.saveText, { color: colors.primaryForeground }]}>
@@ -187,8 +180,7 @@ export default function LogScreen() {
         {isEditing && (
           <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton}>
             <Text style={{ color: colors.mutedForeground }}>Cancel</Text>
-          </Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
         )}
       </ScrollView>
     </KeyboardAvoidingView>

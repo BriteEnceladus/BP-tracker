@@ -1,17 +1,9 @@
 import { Platform } from 'react-native';
 import Dexie, { Table } from 'dexie';
+import { BPReadingSchema, type BPReading as BPReadingType } from './schemas';
 
-export interface BPReading {
-  id?: number;
-  timestamp: string; // ISO 8601 string
-  systolic: number;
-  diastolic: number;
-  heartRate?: number;
-  notes?: string;
-  medicationTaken?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+// Re-export the canonical type
+export type BPReading = BPReadingType;
 
 // ---------- Web only (Dexie / IndexedDB) ----------
 class BPTrackerDatabase extends Dexie {

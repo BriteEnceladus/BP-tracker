@@ -2,6 +2,8 @@
  * Native storage layer for encryption setup / unlock / biometric convenience.
  * Uses expo-secure-store for all sensitive material.
  * Biometrics (expo-local-authentication) are convenience only.
+ *
+ * Now uses real AES-256-GCM from crypto.native (via react-native-quick-crypto).
  */
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -27,7 +29,7 @@ export async function isEncryptionSetup(): Promise<boolean> {
   return !!(salt && verifier);
 }
 
-export async function setupEncryption(password: string): Promise<string> {
+export async function setupEncryption(password: string): Promise<CryptoKey> {
   const salt = await generateSalt();
   const key = await deriveKey(password, salt);
   const verifier = await createVerifier(key);
@@ -38,7 +40,7 @@ export async function setupEncryption(password: string): Promise<string> {
   return key;
 }
 
-export async function unlockWithPassword(password: string): Promise<string | null> {
+export async function unlockWithPassword(password: string): Promise<CryptoKey | null> {
   const salt = await SecureStore.getItemAsync(SALT_KEY);
   const verifierRaw = await SecureStore.getItemAsync(VERIFIER_KEY);
   if (!salt || !verifierRaw) return null;
@@ -54,9 +56,9 @@ export async function unlockWithPassword(password: string): Promise<string | nul
 }
 
 export async function changeEncryptionPassword(
-  _oldKey: string,
+  oldKey: CryptoKey,
   newPassword: string
-): Promise<string> {
+): Promise<CryptoKey> {
   const newSalt = await generateSalt();
   const newKey = await deriveKey(newPassword, newSalt);
   const newVerifier = await createVerifier(newKey);

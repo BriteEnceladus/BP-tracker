@@ -1,20 +1,62 @@
 /**
- * Web readings store — thin wrapper around Dexie so BPContext can use the same API.
+ * Web readings store with real per-reading AES-256-GCM encryption.
+ * Uses Dexie + the readingEncryption layer.
+ *
+ * All data is encrypted with the session master key before storage.
  */
 import { liveQuery } from 'dexie';
-import { db, BPReading } from './db';
+import { db } from './db';
+import { BPReading, BPReadingInput } from './schemas';
+import {
+  encryptReading,
+  decryptReading,
+  type EncryptedReadingPayload,
+} from '../utils/readingEncryption';
 
-export async function getAllReadings(): Promise<BPReading[]> {
-  return db.readings.orderBy('timestamp').reverse().toArray();
+export interface EncryptedStoredReading {
+  id?: number;
+  encrypted: EncryptedReadingPayload;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function getAllReadings(key?: SessionCryptoKey): Promise<BPReading[]> {
+  if (!key) {
+    // During migration or unlocked check, return empty or handle
+    console.warn('[readingsStore.web] No key provided for decryption');
+    return [];
+  }
+
+  const stored = await db.readings.toArray() as any[];
+  const decrypted: BPReading[] = [];
+
+  for (const item of stored) {
+    try {
+      if (item.encrypted) {
+        // New encrypted format
+        const reading = await decryptReading(item.encrypted, key);
+        decrypted.push({ ...reading, id: item.id });
+      } else if (item.systolic !== undefined) {
+        // Legacy plaintext (for migration)
+        decrypted.push(item as BPReading);
+      }
+    } catch (e) {
+      console.error('[readingsStore.web] Failed to decrypt reading', e);
+    }
+  }
+
+  return decrypted.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 export function subscribeToReadings(
   onNext: (readings: BPReading[]) => void,
-  onError?: (err: any) => void
+  onError?: (err: any) => void,
+  key?: SessionCryptoKey
 ) {
-  const subscription = liveQuery(() =>
-    db.readings.orderBy('timestamp').reverse().toArray()
-  ).subscribe({
+  const subscription = liveQuery(async () => {
+    if (!key) return [];
+    return getAllReadings(key);
+  }).subscribe({
     next: onNext,
     error: onError,
   });
@@ -22,7 +64,8 @@ export function subscribeToReadings(
 }
 
 export async function addReading(
-  data: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'>
+  data: BPReadingInput,
+  key: SessionCryptoKey
 ): Promise<BPReading> {
   const now = new Date().toISOString();
   const reading: BPReading = {
@@ -30,20 +73,46 @@ export async function addReading(
     createdAt: now,
     updatedAt: now,
   };
-  const id = await db.readings.add(reading);
+
+  const encrypted = await encryptReading(reading, key);
+
+  const stored: EncryptedStoredReading = {
+    encrypted,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const id = await db.readings.add(stored as any);
   return { ...reading, id: id as number };
 }
 
 export async function updateReading(
   id: number,
-  updates: Partial<BPReading>
+  updates: Partial<BPReadingInput>,
+  key: SessionCryptoKey
 ): Promise<void> {
-  const existing = await db.readings.get(id);
+  const existing = await db.readings.get(id) as any;
   if (!existing) throw new Error('Reading not found');
-  await db.readings.put({
-    ...existing,
+
+  let currentReading: BPReading;
+  if (existing.encrypted) {
+    currentReading = await decryptReading(existing.encrypted, key);
+  } else {
+    currentReading = existing as BPReading;
+  }
+
+  const updated = {
+    ...currentReading,
     ...updates,
     updatedAt: new Date().toISOString(),
+  };
+
+  const newEncrypted = await encryptReading(updated, key);
+
+  await db.readings.put({
+    ...existing,
+    encrypted: newEncrypted,
+    updatedAt: updated.updatedAt,
   });
 }
 

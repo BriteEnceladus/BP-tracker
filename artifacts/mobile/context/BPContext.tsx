@@ -9,12 +9,16 @@ import React, {
 import { Platform } from 'react-native';
 import { BPReading } from '../src/db';
 import * as store from '../src/readingsStore';
+import { useCrypto } from './CryptoContext';
+import { type SessionCryptoKey } from '../utils/readingEncryption';
+import { BPReadingInput } from '../src/schemas';
+import { runMigrationIfNeeded } from '../src/migration';
 
 interface BPContextType {
   readings: BPReading[];
   isLoading: boolean;
-  addReading: (reading: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateReading: (id: number, updates: Partial<BPReading>) => Promise<void>;
+  addReading: (reading: BPReadingInput) => Promise<void>;
+  updateReading: (id: number, updates: Partial<BPReadingInput>) => Promise<void>;
   deleteReading: (id: number) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -24,21 +28,40 @@ const BPContext = createContext<BPContextType | undefined>(undefined);
 export function BPProvider({ children }: { children: ReactNode }) {
   const [readings, setReadings] = useState<BPReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { cryptoKey, isUnlocked } = useCrypto();
+
+  const getKey = useCallback(() => {
+    if (!cryptoKey || !isUnlocked) {
+      throw new Error('Cannot access encrypted data without valid session key');
+    }
+    return cryptoKey as SessionCryptoKey;
+  }, [cryptoKey, isUnlocked]);
 
   const refresh = useCallback(async () => {
     try {
-      const data = await store.getAllReadings();
+      const key = getKey();
+      const data = await store.getAllReadings(key);
       setReadings(data);
     } catch (e) {
       console.error('[BPContext] refresh failed', e);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [getKey]);
 
   useEffect(() => {
+    if (!isUnlocked || !cryptoKey) {
+      setReadings([]);
+      setIsLoading(false);
+      return;
+    }
+
+    // Run migration once on unlock with valid key
+    runMigrationIfNeeded(cryptoKey as SessionCryptoKey).catch(console.warn);
+
     // Web: prefer liveQuery for automatic reactivity
     if (Platform.OS === 'web' && 'subscribeToReadings' in store) {
+      const key = cryptoKey as SessionCryptoKey;
       const unsub = (store as any).subscribeToReadings(
         (result: BPReading[]) => {
           setReadings(result);
@@ -47,33 +70,33 @@ export function BPProvider({ children }: { children: ReactNode }) {
         (err: any) => {
           console.error('Dexie liveQuery error:', err);
           setIsLoading(false);
-        }
+        },
+        key
       );
       return unsub;
     }
 
     // Native: one-shot load + manual refresh after mutations
     refresh();
-  }, [refresh]);
+  }, [refresh, isUnlocked, cryptoKey]);
 
-  const addReading = async (
-    readingData: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'>
-  ) => {
+  const addReading = async (readingData: BPReadingInput) => {
     try {
-      await store.addReading(readingData);
+      const key = getKey();
+      await store.addReading(readingData, key);
       if (Platform.OS !== 'web') {
         await refresh();
       }
-      // On web, liveQuery updates automatically
     } catch (error) {
       console.error('Failed to add reading:', error);
       throw error;
     }
   };
 
-  const updateReading = async (id: number, updates: Partial<BPReading>) => {
+  const updateReading = async (id: number, updates: Partial<BPReadingInput>) => {
     try {
-      await store.updateReading(id, updates);
+      const key = getKey();
+      await store.updateReading(id, updates, key);
       if (Platform.OS !== 'web') {
         await refresh();
       }
@@ -85,7 +108,8 @@ export function BPProvider({ children }: { children: ReactNode }) {
 
   const deleteReading = async (id: number) => {
     try {
-      await store.deleteReading(id);
+      const key = getKey();
+      await store.deleteReading(id, key);
       if (Platform.OS !== 'web') {
         await refresh();
       }

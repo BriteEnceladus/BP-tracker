@@ -1,18 +1,23 @@
 /**
- * Native readings persistence using AsyncStorage.
- * Same shape as the web Dexie store so BPContext API stays identical.
- * Data is protected by the CryptoContext unlock gate.
- * TODO: encrypt the stored JSON with the session crypto key for at-rest protection.
+ * Native readings persistence with real per-reading AES-256-GCM encryption.
+ * Uses AsyncStorage + the readingEncryption layer.
+ *
+ * Data is protected by the session crypto key (not just the lock gate).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BPReading } from './db';
+import { BPReading, BPReadingInput } from './schemas';
+import {
+  encryptReading,
+  decryptReading,
+  type EncryptedReadingPayload,
+} from '../utils/readingEncryption';
 
-const STORAGE_KEY = 'bp_readings_v1';
+const STORAGE_KEY = 'bp_readings_v2_encrypted'; // v2 for new encrypted format
 
 let memoryCache: BPReading[] | null = null;
 let nextId = 1;
 
-async function load(): Promise<BPReading[]> {
+async function load(key?: SessionCryptoKey): Promise<BPReading[]> {
   if (memoryCache) return memoryCache;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -20,10 +25,27 @@ async function load(): Promise<BPReading[]> {
       memoryCache = [];
       return memoryCache;
     }
-    const parsed: BPReading[] = JSON.parse(raw);
-    memoryCache = parsed;
-    // Keep nextId higher than any existing id
-    const maxId = parsed.reduce((m, r) => Math.max(m, r.id ?? 0), 0);
+
+    const stored: any[] = JSON.parse(raw);
+    const decrypted: BPReading[] = [];
+
+    for (const item of stored) {
+      try {
+        if (item.encrypted) {
+          if (!key) throw new Error('No key for decryption');
+          const reading = await decryptReading(item.encrypted, key);
+          decrypted.push({ ...reading, id: item.id });
+        } else if (item.systolic !== undefined) {
+          // Legacy plaintext during migration
+          decrypted.push(item as BPReading);
+        }
+      } catch (e) {
+        console.warn('[readingsStore.native] Failed to decrypt item', e);
+      }
+    }
+
+    memoryCache = decrypted;
+    const maxId = decrypted.reduce((m, r) => Math.max(m, r.id ?? 0), 0);
     nextId = maxId + 1;
     return memoryCache;
   } catch (e) {
@@ -33,28 +55,49 @@ async function load(): Promise<BPReading[]> {
   }
 }
 
-async function persist(readings: BPReading[]): Promise<void> {
+async function persist(readings: BPReading[], key?: SessionCryptoKey): Promise<void> {
   memoryCache = readings;
+
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(readings));
+    let toStore: any[];
+
+    if (key) {
+      // Store encrypted
+      toStore = await Promise.all(
+        readings.map(async (r) => {
+          const encrypted = await encryptReading(r, key);
+          return {
+            id: r.id,
+            encrypted,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt,
+          };
+        })
+      );
+    } else {
+      // Fallback for migration scenarios
+      toStore = readings;
+    }
+
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
   } catch (e) {
     console.error('[readingsStore.native] persist failed', e);
     throw e;
   }
 }
 
-export async function getAllReadings(): Promise<BPReading[]> {
-  const all = await load();
-  // Newest first (same as Dexie orderBy('timestamp').reverse())
+export async function getAllReadings(key?: SessionCryptoKey): Promise<BPReading[]> {
+  const all = await load(key);
   return [...all].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 }
 
 export async function addReading(
-  data: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'>
+  data: BPReadingInput,
+  key: SessionCryptoKey
 ): Promise<BPReading> {
-  const all = await load();
+  const all = await load(key);
   const now = new Date().toISOString();
   const reading: BPReading = {
     ...data,
@@ -63,30 +106,32 @@ export async function addReading(
     updatedAt: now,
   };
   all.push(reading);
-  await persist(all);
+  await persist(all, key);
   return reading;
 }
 
 export async function updateReading(
   id: number,
-  updates: Partial<BPReading>
+  updates: Partial<BPReadingInput>,
+  key: SessionCryptoKey
 ): Promise<void> {
-  const all = await load();
+  const all = await load(key);
   const idx = all.findIndex((r) => r.id === id);
   if (idx === -1) throw new Error('Reading not found');
+
   all[idx] = {
     ...all[idx],
     ...updates,
     id,
     updatedAt: new Date().toISOString(),
   };
-  await persist(all);
+  await persist(all, key);
 }
 
-export async function deleteReading(id: number): Promise<void> {
-  const all = await load();
+export async function deleteReading(id: number, key?: SessionCryptoKey): Promise<void> {
+  const all = await load(key);
   const next = all.filter((r) => r.id !== id);
-  await persist(next);
+  await persist(next, key);
 }
 
 export async function clearAllReadings(): Promise<void> {
