@@ -3,6 +3,7 @@
  * Uses AsyncStorage + the readingEncryption layer.
  *
  * Data is protected by the session crypto key (not just the lock gate).
+ * clearMemoryCache() must be called on lock so plaintext does not linger.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BPReading, BPReadingInput } from './schemas';
@@ -10,12 +11,17 @@ import {
   encryptReading,
   decryptReading,
   type EncryptedReadingPayload,
+  type SessionCryptoKey,
 } from '../utils/readingEncryption';
 
-const STORAGE_KEY = 'bp_readings_v2_encrypted'; // v2 for new encrypted format
+const STORAGE_KEY = 'bp_readings_v2_encrypted';
 
 let memoryCache: BPReading[] | null = null;
 let nextId = 1;
+
+export function clearMemoryCache(): void {
+  memoryCache = null;
+}
 
 async function load(key?: SessionCryptoKey): Promise<BPReading[]> {
   if (memoryCache) return memoryCache;
@@ -62,7 +68,6 @@ async function persist(readings: BPReading[], key?: SessionCryptoKey): Promise<v
     let toStore: any[];
 
     if (key) {
-      // Store encrypted
       toStore = await Promise.all(
         readings.map(async (r) => {
           const encrypted = await encryptReading(r, key);
@@ -75,7 +80,6 @@ async function persist(readings: BPReading[], key?: SessionCryptoKey): Promise<v
         })
       );
     } else {
-      // Fallback for migration scenarios
       toStore = readings;
     }
 
@@ -135,7 +139,7 @@ export async function deleteReading(id: number, key?: SessionCryptoKey): Promise
 }
 
 export async function clearAllReadings(): Promise<void> {
-  memoryCache = [];
+  memoryCache = null;
   nextId = 1;
   await AsyncStorage.removeItem(STORAGE_KEY);
 }

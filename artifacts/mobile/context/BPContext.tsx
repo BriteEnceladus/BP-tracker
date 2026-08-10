@@ -38,28 +38,36 @@ export function BPProvider({ children }: { children: ReactNode }) {
   }, [cryptoKey, isUnlocked]);
 
   const refresh = useCallback(async () => {
+    if (!isUnlocked || !cryptoKey) {
+      setReadings([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       const key = getKey();
       const data = await store.getAllReadings(key);
       setReadings(data);
     } catch (e) {
       console.error('[BPContext] refresh failed', e);
+      setReadings([]);
     } finally {
       setIsLoading(false);
     }
-  }, [getKey]);
+  }, [getKey, isUnlocked, cryptoKey]);
 
   useEffect(() => {
     if (!isUnlocked || !cryptoKey) {
+      // Wipe plaintext from React state + store memory cache on lock
       setReadings([]);
       setIsLoading(false);
+      if (typeof (store as any).clearMemoryCache === 'function') {
+        (store as any).clearMemoryCache();
+      }
       return;
     }
 
-    // Run migration once on unlock with valid key
     runMigrationIfNeeded(cryptoKey as SessionCryptoKey).catch(console.warn);
 
-    // Web: prefer liveQuery for automatic reactivity
     if (Platform.OS === 'web' && 'subscribeToReadings' in store) {
       const key = cryptoKey as SessionCryptoKey;
       const unsub = (store as any).subscribeToReadings(
@@ -76,7 +84,6 @@ export function BPProvider({ children }: { children: ReactNode }) {
       return unsub;
     }
 
-    // Native: one-shot load + manual refresh after mutations
     refresh();
   }, [refresh, isUnlocked, cryptoKey]);
 
