@@ -2,6 +2,18 @@
 
 A secure, standalone blood pressure and heart rate tracking app built with Expo.
 
+## Version
+
+**Current release tag: `v1.3.0`**
+
+See [CHANGELOG.md](CHANGELOG.md) and [VERSIONING.md](VERSIONING.md) for tags, rollbacks, and release steps.
+
+```powershell
+git tag -l -n9                 # list versions
+git checkout v1.3.0            # inspect a release
+git checkout -b hotfix/from-v1.3.0   # branch to fix from a tag
+```
+
 ## Features
 
 - Strong AES-256-GCM client-side encryption (web)
@@ -13,7 +25,7 @@ A secure, standalone blood pressure and heart rate tracking app built with Expo.
 - Dark mode
 - PWA + Standalone APK support
 - Date/time picker and input validation
-- **Puter cloud sync (web)** — sign in under Settings → Cloud Sync to backup/merge readings in your Puter account
+- **Puter cloud backup on mobile + web** — Settings → Optional cloud backup
 
 ## Build Instructions
 
