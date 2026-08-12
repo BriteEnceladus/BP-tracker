@@ -1,0 +1,56 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Android / Gradle (root scaffold)
+.gradle/
+**/build/
+local.properties
+.cxx/
+.externalNativeBuild/
+captures/
+
+# Node / Expo (mobile app)
+**/node_modules/
+**/.expo/
+**/dist/
+**/web-build/
+**/.metro-health-check*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+google-service-account.json
+credentials.json
+
+# Native build outputs
+artifacts/mobile/android/app/build/
+artifacts/mobile/android/build/
+artifacts/mobile/android/.gradle/
+artifacts/mobile/ios/build/
+artifacts/mobile/ios/Pods/
+
+# Archives / exports
+*.tar.gz
+ReplitExport-*.tar.gz
+
+# TypeScript
+**/expo-env.d.ts
+
+# Misc
+*.orig.*
+.pnpm-store/

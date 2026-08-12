@@ -1,0 +1,11 @@
+# Keep EAS upload small (git root is monorepo)
+../../app/
+../../gradle/
+../../.idea/
+../../ReplitExport-*.tar.gz
+**/*.tar.gz
+node_modules/
+.expo/
+android/app/build/
+android/build/
+android/.gradle/

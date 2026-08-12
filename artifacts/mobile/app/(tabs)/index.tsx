@@ -1,0 +1,319 @@
+import React, { useMemo } from "react";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Alert,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useColors } from "../../hooks/useColors";
+import { useBP } from "../../context/BPContext";
+import { BPCard } from "../../components/BPCard";
+import { BPChart } from "../../components/BPChart";
+import { StatCard } from "../../components/StatCard";
+import {
+  getBPCategory,
+  getReadingsForDays,
+  getAverages,
+} from "../../utils/bpUtils";
+
+export default function DashboardScreen() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const { readings, isLoading, cloudSignedIn, cloudSyncing } = useBP();
+
+  const sortedReadings = useMemo(() => {
+    return [...readings].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }, [readings]);
+
+  const latest = sortedReadings[0] ?? null;
+
+  // Last 7 days for stats and chart
+  const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
+  const averages = useMemo(() => getAverages(last7Days), [last7Days]);
+
+  // Recent readings (last 5)
+  const recentReadings = sortedReadings.slice(0, 5);
+
+  // Trend alert
+  const trendAlert = useMemo(() => {
+    if (sortedReadings.length < 3) return null;
+    const recent = sortedReadings.slice(0, 3).reverse();
+    const sysTrend = recent[2].systolic - recent[0].systolic;
+    const diaTrend = recent[2].diastolic - recent[0].diastolic;
+
+    if (sysTrend >= 10 || diaTrend >= 5) {
+      return "Readings trending upward. Consider consulting your doctor.";
+    }
+    return null;
+  }, [sortedReadings]);
+
+  const setDailyReminder = async () => {
+    Alert.alert(
+      'Reminders',
+      'Set a daily alarm on your phone for now. In-app notifications can be added in a later build.'
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Text style={{ color: colors.mutedForeground }}>Loading your data...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + 12,
+            backgroundColor: colors.card,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
+            {cloudSignedIn
+              ? cloudSyncing
+                ? 'Cloud syncing…'
+                : 'On this phone · cloud backup on'
+              : 'On this phone'}
+          </Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+            BP Tracker
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+            onPress={setDailyReminder}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="bell" size={20} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: colors.primary }]}
+            onPress={() => router.push("/(tabs)/log")}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            accessibilityLabel="Log new reading"
+          >
+            <Feather name="plus" size={24} color={colors.primaryForeground} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Trend Alert */}
+        {trendAlert && (
+          <View style={[styles.alert, { backgroundColor: colors.crisis + "20", borderColor: colors.crisis }]}>
+            <Feather name="trending-up" size={18} color={colors.crisis} />
+            <Text style={[styles.alertText, { color: colors.foreground }]}>{trendAlert}</Text>
+          </View>
+        )}
+
+        {/* Latest Reading */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Latest Reading</Text>
+          {latest ? (
+            <BPCard reading={latest} />
+          ) : (
+            <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={{ color: colors.mutedForeground }}>No readings yet</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/log")}>
+                <Text style={{ color: colors.primary, marginTop: 8 }}>Log your first reading →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Stats */}
+        {last7Days.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Last 7 Days</Text>
+            <View style={styles.statsRow}>
+              <StatCard
+                label="Avg Systolic"
+                value={averages.avgSystolic || "--"}
+                unit="mmHg"
+              />
+              <StatCard
+                label="Avg Diastolic"
+                value={averages.avgDiastolic || "--"}
+                unit="mmHg"
+              />
+              <StatCard
+                label="Readings"
+                value={last7Days.length}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Chart */}
+        {last7Days.length > 1 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Trend (Last 7 Days)</Text>
+            <BPChart 
+              readings={last7Days} 
+              onPointPress={(reading) => {
+                if (reading.id) {
+                  router.push(`/reading/${reading.id}`);
+                }
+              }} 
+            />
+          </View>
+        )}
+
+        {/* Recent Readings */}
+        {recentReadings.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent Readings</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/history")}>
+                <Text style={{ color: colors.primary }}>See all →</Text>
+              </TouchableOpacity>
+            </View>
+
+            {recentReadings.map((reading) => (
+              <TouchableOpacity
+                key={reading.id || reading.timestamp}
+                onPress={() => router.push({
+                  pathname: "/(tabs)/log",
+                  params: { id: reading.id?.toString() }
+                })}
+              >
+                <BPCard reading={reading} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {readings.length === 0 && (
+          <View style={styles.emptyState}>
+            <Feather name="activity" size={48} color={colors.mutedForeground} />
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              Start tracking your health
+            </Text>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              Log your first blood pressure reading to see insights here.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  greeting: {
+    fontSize: 14,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+  },
+  addBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  scrollContent: {
+    paddingBottom: 32,
+  },
+  section: {
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  alert: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  alertText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  emptyCard: {
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  emptyState: {
+    alignItems: "center",
+    padding: 40,
+    marginTop: 40,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginTop: 16,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 20,
+  },
+});
