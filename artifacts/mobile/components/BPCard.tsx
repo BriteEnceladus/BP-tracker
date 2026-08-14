@@ -14,33 +14,95 @@ export function BPCard({ reading }: BPCardProps) {
   const categoryLabel = getCategoryLabel(categoryKey);
 
   const categoryColor =
-    categoryKey === 'normal' ? colors.normal :
-    categoryKey === 'elevated' ? colors.elevated :
-    categoryKey === 'stage1' ? colors.stage1 :
-    categoryKey === 'stage2' ? colors.stage2 : colors.crisis;
+    categoryKey === 'normal'
+      ? colors.normal
+      : categoryKey === 'elevated'
+        ? colors.elevated
+        : categoryKey === 'stage1'
+          ? colors.stage1
+          : categoryKey === 'stage2'
+            ? colors.stage2
+            : colors.crisis;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          borderLeftColor: categoryColor,
+        },
+      ]}
+    >
+      {/* Top row: numbers + badge */}
       <View style={styles.topRow}>
-        <View style={styles.row}>
-          <Text style={[styles.value, { color: colors.foreground }]}>
-            {reading.systolic}/{reading.diastolic}
-          </Text>
-          <Text style={[styles.unit, { color: colors.mutedForeground }]}>mmHg</Text>
+        <View style={styles.numbersRow}>
+          {/* Systolic */}
+          <View style={styles.numberBlock}>
+            <Text style={[styles.value, { color: categoryColor }]}>
+              {reading.systolic}
+            </Text>
+            <Text style={[styles.subLabel, { color: colors.mutedForeground }]}>
+              SYS
+            </Text>
+          </View>
+
+          <Text style={[styles.slash, { color: colors.mutedForeground }]}>/</Text>
+
+          {/* Diastolic */}
+          <View style={styles.numberBlock}>
+            <Text style={[styles.value, { color: categoryColor }]}>
+              {reading.diastolic}
+            </Text>
+            <Text style={[styles.subLabel, { color: colors.mutedForeground }]}>
+              DIA
+            </Text>
+          </View>
+
+          {/* Heart Rate */}
+          {reading.heartRate ? (
+            <>
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: colors.border },
+                ]}
+              />
+              <View style={styles.numberBlock}>
+                <Text style={[styles.value, { color: colors.chartBPM }]}>
+                  {reading.heartRate}
+                </Text>
+                <Text style={[styles.subLabel, { color: colors.mutedForeground }]}>
+                  BPM
+                </Text>
+              </View>
+            </>
+          ) : null}
         </View>
-        <View style={[styles.badge, { backgroundColor: categoryColor + '22' }]}>
-          <Text style={[styles.badgeText, { color: categoryColor }]}>{categoryLabel}</Text>
+
+        {/* Category badge */}
+        <View
+          style={[
+            styles.badge,
+            { backgroundColor: categoryColor + '22' },
+          ]}
+        >
+          <Text style={[styles.badgeText, { color: categoryColor }]}>
+            {categoryLabel}
+          </Text>
         </View>
       </View>
 
-      {reading.heartRate ? (
-        <Text style={[styles.hr, { color: colors.mutedForeground }]}>
-          Pulse {reading.heartRate} bpm
-        </Text>
-      ) : null}
-
+      {/* Timestamp */}
       <Text style={[styles.time, { color: colors.mutedForeground }]}>
-        {new Date(reading.timestamp).toLocaleString()}
+        {new Date(reading.timestamp).toLocaleString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        })}
       </Text>
     </View>
   );
@@ -48,43 +110,64 @@ export function BPCard({ reading }: BPCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    padding: 18,
+    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
+    borderLeftWidth: 5,
     marginBottom: 12,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 12,
   },
-  row: {
+  numbersRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
+    flex: 1,
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  numberBlock: {
+    alignItems: 'center',
+    minWidth: 48,
   },
   value: {
-    fontSize: 32,          // Bold data-focused size
+    fontSize: 28,
     fontWeight: '700',
+    letterSpacing: -0.5,
   },
-  unit: {
-    fontSize: 14,
-    marginLeft: 6,
+  subLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  slash: {
+    fontSize: 24,
+    fontWeight: '300',
+    marginHorizontal: 2,
+    marginBottom: 14,
+  },
+  divider: {
+    width: 1,
+    height: 36,
+    marginHorizontal: 10,
+    opacity: 0.6,
   },
   badge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 20,
+    alignSelf: 'flex-start',
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-  },
-  hr: {
-    fontSize: 14,
-    marginTop: 6,
   },
   time: {
     fontSize: 12,
-    marginTop: 8,
+    marginTop: 12,
   },
 });

@@ -12,8 +12,8 @@ export function getCategoryLabel(category: string): string {
   const labels: Record<string, string> = {
     normal: 'Normal',
     elevated: 'Elevated',
-    stage1: 'Stage 1 Hypertension',
-    stage2: 'Stage 2 Hypertension',
+    stage1: 'High BP Stage 1',
+    stage2: 'High BP Stage 2',
     crisis: 'Hypertensive Crisis',
   };
   return labels[category] || 'Unknown';
