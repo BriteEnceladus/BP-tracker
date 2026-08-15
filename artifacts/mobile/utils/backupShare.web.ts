@@ -1,4 +1,5 @@
 import type { EncryptedBackupFile } from './backup';
+import { pickTextFile } from './filePick';
 
 export async function shareBackupFile(backup: EncryptedBackupFile): Promise<void> {
   const fileName = `bp-tracker-backup-${backup.createdAt.slice(0, 10)}.json`;
@@ -14,18 +15,5 @@ export async function shareBackupFile(backup: EncryptedBackupFile): Promise<void
 }
 
 export async function pickBackupFile(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json,.json';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) {
-        reject(new Error('No file selected'));
-        return;
-      }
-      resolve(await file.text());
-    };
-    input.click();
-  });
+  return pickTextFile();
 }

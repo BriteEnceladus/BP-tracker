@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 — 2026-08-15
+
+- CSV import is live on History and Settings (same format as export).
+- File picker accepts CSV/JSON on Android instead of only `application/json`.
+- Duplicate readings are skipped on import.
+
 ## 1.1.0 — 2026-08-14
 
 - Merge the polish design system into `main` (color-coded readings, medications, legal docs).

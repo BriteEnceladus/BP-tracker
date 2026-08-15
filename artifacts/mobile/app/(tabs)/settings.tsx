@@ -20,6 +20,8 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { readingsToCsv } from '../../utils/csvExport';
 import { shareCsvFile } from '../../utils/csvShare';
+import { isDuplicateReading, parseCsvReadings } from '../../utils/csvImport';
+import { pickTextFile } from '../../utils/filePick';
 import { getReminderSettings, saveReminderSettings, type ReminderSettings } from '../../utils/reminders';
 import { createEncryptedBackup, decryptBackup, isEncryptedBackupFile } from '../../utils/backup';
 import { pickBackupFile, shareBackupFile } from '../../utils/backupShare';
@@ -34,7 +36,7 @@ const PRIVACY_URL =
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { readings, refresh } = useBP();
+  const { readings, refresh, addReading } = useBP();
   const { medications, refresh: refreshMeds } = useMeds();
   const {
     biometricSupported,
@@ -97,6 +99,48 @@ export default function SettingsScreen() {
       await shareCsvFile(readingsToCsv(readings), `bp_readings_${new Date().toISOString().split('T')[0]}.csv`);
     } catch {
       Alert.alert('Export Failed', 'Unable to export the CSV file. Please try again.');
+    }
+  };
+
+  const importCsv = async () => {
+    try {
+      const raw = await pickTextFile();
+      const { readings: incoming, errors } = parseCsvReadings(raw);
+      const unique = incoming.filter((reading) => !isDuplicateReading(readings, reading));
+      if (incoming.length === 0) {
+        Alert.alert('Import failed', errors[0] || 'No valid readings were found in that file.');
+        return;
+      }
+      if (unique.length === 0) {
+        Alert.alert('Nothing new', `All ${incoming.length} reading(s) are already in the app.`);
+        return;
+      }
+      Alert.alert(
+        'Import readings?',
+        `Add ${unique.length} reading(s)${incoming.length !== unique.length ? ` (${incoming.length - unique.length} duplicate(s) skipped)` : ''}${errors.length ? `. ${errors.length} row(s) had errors and will be skipped.` : '.'}`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Import',
+            onPress: async () => {
+              try {
+                for (const reading of unique) {
+                  await addReading(reading);
+                }
+                await refresh();
+                Alert.alert('Import complete', `Added ${unique.length} reading(s).`);
+              } catch {
+                Alert.alert('Import failed', 'Some readings could not be saved.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message !== 'No file selected') {
+        Alert.alert('Import failed', 'Could not read that file. Use a CSV exported from BP Tracker.');
+      }
     }
   };
 
@@ -382,8 +426,12 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.foreground }}>Export readings (CSV)</Text>
           <Feather name="download" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.row} onPress={importCsv}>
+          <Text style={{ color: colors.foreground }}>Import readings (CSV)</Text>
+          <Feather name="upload" size={18} color={colors.mutedForeground} />
+        </TouchableOpacity>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          CSV and PDF are plaintext. Treat them as sensitive.
+          CSV and PDF are plaintext. Encrypted backup is the private option. Treat exported files as sensitive.
         </Text>
         <TouchableOpacity style={styles.row} onPress={clearAllData}>
           <Text style={{ color: colors.crisis }}>Clear All Data</Text>
@@ -395,7 +443,7 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>About</Text>
         <View style={styles.row}>
           <Text style={{ color: colors.foreground }}>Version</Text>
-          <Text style={{ color: colors.mutedForeground }}>1.1.0</Text>
+          <Text style={{ color: colors.mutedForeground }}>1.1.1</Text>
         </View>
         <View style={styles.row}>
           <Text style={{ color: colors.foreground }}>Medical device?</Text>

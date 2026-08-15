@@ -17,6 +17,8 @@ import { StatCard } from '../../components/StatCard';
 import { getReadingsForDays, getAverages, getBPCategory, getCategoryColor } from '../../utils/bpUtils';
 import { readingsToCsv } from '../../utils/csvExport';
 import { shareCsvFile } from '../../utils/csvShare';
+import { isDuplicateReading, parseCsvReadings } from '../../utils/csvImport';
+import { pickTextFile } from '../../utils/filePick';
 import { BPReading } from '../../src/schemas';
 import { Feather } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -66,6 +68,47 @@ export default function HistoryScreen() {
     } catch (error) {
       console.error('CSV Export Error:', error);
       Alert.alert('Export Failed', 'Unable to export the CSV file. Please try again.');
+    }
+  };
+
+  const importFromCsv = async () => {
+    try {
+      const raw = await pickTextFile();
+      const { readings: incoming, errors } = parseCsvReadings(raw);
+      const unique = incoming.filter((reading) => !isDuplicateReading(readings, reading));
+      if (incoming.length === 0) {
+        Alert.alert('Import failed', errors[0] || 'No valid readings were found in that file.');
+        return;
+      }
+      if (unique.length === 0) {
+        Alert.alert('Nothing new', `All ${incoming.length} reading(s) are already in History.`);
+        return;
+      }
+      Alert.alert(
+        'Import readings?',
+        `Add ${unique.length} reading(s)${errors.length ? `. ${errors.length} row(s) will be skipped.` : '.'}`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Import',
+            onPress: async () => {
+              try {
+                for (const reading of unique) {
+                  await addReading(reading);
+                }
+                Alert.alert('Import complete', `Added ${unique.length} reading(s).`);
+              } catch {
+                Alert.alert('Import failed', 'Some readings could not be saved.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message !== 'No file selected') {
+        Alert.alert('Import failed', 'Could not read that file. Use a CSV exported from this app.');
+      }
     }
   };
 
@@ -144,9 +187,14 @@ export default function HistoryScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>History</Text>
-        <TouchableOpacity onPress={exportToCSV}>
-          <Feather name="download" size={24} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <TouchableOpacity onPress={importFromCsv} accessibilityLabel="Import CSV">
+            <Feather name="upload" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={exportToCSV} accessibilityLabel="Export CSV">
+            <Feather name="download" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filter chips */}

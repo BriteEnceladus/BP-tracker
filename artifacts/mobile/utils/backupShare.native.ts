@@ -1,12 +1,11 @@
 // @ts-nocheck — expo-file-system/legacy ships untyped shim sources in SDK 54
-import * as DocumentPicker from 'expo-document-picker';
 import { isAvailableAsync, shareAsync } from 'expo-sharing';
 import type { EncryptedBackupFile } from './backup';
+import { pickTextFile } from './filePick';
 
 type LegacyFileSystem = {
   documentDirectory: string | null;
   writeAsStringAsync: (uri: string, contents: string, options?: { encoding?: string }) => Promise<void>;
-  readAsStringAsync: (uri: string, options?: { encoding?: string }) => Promise<string>;
   EncodingType: { UTF8: string };
 };
 
@@ -32,14 +31,5 @@ export async function shareBackupFile(backup: EncryptedBackupFile): Promise<void
 }
 
 export async function pickBackupFile(): Promise<string> {
-  const result = await DocumentPicker.getDocumentAsync({
-    type: 'application/json',
-    copyToCacheDirectory: true,
-  });
-  if (result.canceled || !result.assets?.[0]?.uri) {
-    throw new Error('No file selected');
-  }
-  return FileSystem.readAsStringAsync(result.assets[0].uri, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  return pickTextFile();
 }
