@@ -77,6 +77,14 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "appName": "BP Tracker",
+      "version": "1.1.0",
+      "eas": {
+        "projectId": "01be2be0-2ae4-4bee-9974-3620e64ef682"
+      }
+    },
+    "owner": "frostenceladus"
   }
 }
