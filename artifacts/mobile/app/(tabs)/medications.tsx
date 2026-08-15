@@ -1,518 +1,401 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
-  TextInput,
-  Modal,
+  ScrollView,
   Alert,
+  Switch,
+  Modal,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  Switch,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../../hooks/useColors';
 import { useMeds } from '../../context/MedsContext';
-import { Medication } from '../../src/db';
+import { Medication, MedicationInput, parseWithSchema, MedicationInputSchema } from '../../src/schemas';
 
 export default function MedicationsScreen() {
   const colors = useColors();
-  const {
-    medications,
-    isLoading,
-    addMedication,
-    updateMedication,
-    deleteMedication,
-    toggleActive,
-  } = useMeds();
+  const insets = useSafeAreaInsets();
+  const { medications, isLoading, addMedication, updateMedication, deleteMedication, toggleActive } =
+    useMeds();
 
-  const [search, setSearch] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingMed, setEditingMed] = useState<Medication | null>(null);
+  const [editing, setEditing] = useState<Medication | null>(null);
 
-  // Form state
+  // Form state — real controlled inputs, no placeholders as values
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
-  const [frequency, setFrequency] = useState('Once daily');
+  const [frequency, setFrequency] = useState('');
+  const [startDate, setStartDate] = useState('');
   const [notes, setNotes] = useState('');
-  const [isActive, setIsActive] = useState(true);
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return medications;
-    const q = search.toLowerCase();
-    return medications.filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.dosage.toLowerCase().includes(q) ||
-        m.frequency.toLowerCase().includes(q)
-    );
-  }, [medications, search]);
+  const [active, setActive] = useState(true);
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const openAdd = () => {
-    setEditingMed(null);
+    setEditing(null);
     setName('');
     setDosage('');
-    setFrequency('Once daily');
+    setFrequency('');
+    setStartDate(new Date().toISOString().slice(0, 10));
     setNotes('');
-    setIsActive(true);
+    setActive(true);
+    setFormError('');
     setModalVisible(true);
   };
 
   const openEdit = (med: Medication) => {
-    setEditingMed(med);
+    setEditing(med);
     setName(med.name);
     setDosage(med.dosage);
     setFrequency(med.frequency);
+    setStartDate(med.startDate || '');
     setNotes(med.notes || '');
-    setIsActive(med.isActive);
+    setActive(med.active);
+    setFormError('');
     setModalVisible(true);
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !dosage.trim()) {
-      Alert.alert('Missing fields', 'Name and dosage are required.');
+    setFormError('');
+    const input: MedicationInput = {
+      name: name.trim(),
+      dosage: dosage.trim(),
+      frequency: frequency.trim(),
+      startDate: startDate.trim() || undefined,
+      notes: notes.trim() || undefined,
+      active,
+    };
+
+    const parsed = parseWithSchema(MedicationInputSchema, input);
+    if (!parsed.success) {
+      setFormError(parsed.errors[0] || 'Invalid input');
       return;
     }
 
+    setSaving(true);
     try {
-      if (editingMed?.id) {
-        await updateMedication(editingMed.id, {
-          name: name.trim(),
-          dosage: dosage.trim(),
-          frequency: frequency.trim() || 'Once daily',
-          notes: notes.trim() || undefined,
-          isActive,
-        });
+      if (editing?.id != null) {
+        await updateMedication(editing.id, parsed.data);
       } else {
-        await addMedication({
-          name: name.trim(),
-          dosage: dosage.trim(),
-          frequency: frequency.trim() || 'Once daily',
-          notes: notes.trim() || undefined,
-          isActive,
-        });
+        await addMedication({ ...parsed.data, active: parsed.data.active ?? true });
       }
       setModalVisible(false);
     } catch (e) {
-      Alert.alert('Error', 'Could not save medication.');
+      setFormError('Could not save. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = (med: Medication) => {
+  const confirmDelete = (med: Medication) => {
     Alert.alert(
-      'Delete Medication?',
+      'Delete medication?',
       `Remove "${med.name}" permanently?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            if (med.id) await deleteMedication(med.id);
-          },
+          onPress: () => med.id != null && deleteMedication(med.id),
         },
       ]
     );
   };
 
-  const renderItem = ({ item }: { item: Medication }) => (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => openEdit(item)}
-      activeOpacity={0.75}
-    >
-      {/* Left accent bar */}
-      <View
-        style={[
-          styles.accent,
-          { backgroundColor: item.isActive ? colors.normal : colors.mutedForeground },
-        ]}
-      />
-
-      <View style={styles.cardContent}>
-        <View style={styles.cardTop}>
-          <Text style={[styles.medName, { color: colors.foreground }]} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <View
-            style={[
-              styles.badge,
-              {
-                backgroundColor: item.isActive
-                  ? colors.normal + '22'
-                  : colors.mutedForeground + '22',
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.badgeText,
-                { color: item.isActive ? colors.normal : colors.mutedForeground },
-              ]}
-            >
-              {item.isActive ? 'Active' : 'Inactive'}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={[styles.dosage, { color: colors.mutedForeground }]}>
-          {item.dosage} · {item.frequency}
-        </Text>
-
-        {item.notes ? (
-          <Text style={[styles.notes, { color: colors.mutedForeground }]} numberOfLines={1}>
-            {item.notes}
-          </Text>
-        ) : null}
-      </View>
-
-      <TouchableOpacity
-        onPress={() => item.id && toggleActive(item.id)}
-        style={styles.toggleBtn}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Feather
-          name={item.isActive ? 'check-circle' : 'circle'}
-          size={22}
-          color={item.isActive ? colors.normal : colors.mutedForeground}
-        />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
-  if (isLoading) {
-    return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Text style={{ color: colors.mutedForeground }}>Loading medications...</Text>
-      </View>
-    );
-  }
+  const activeMeds = medications.filter((m) => m.active);
+  const inactiveMeds = medications.filter((m) => !m.active);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Medications</Text>
         <TouchableOpacity
           style={[styles.addBtn, { backgroundColor: colors.primary }]}
           onPress={openAdd}
+          activeOpacity={0.85}
         >
-          <Feather name="plus" size={22} color={colors.primaryForeground} />
+          <Feather name="plus" size={20} color={colors.primaryForeground || '#fff'} />
+          <Text style={[styles.addBtnText, { color: colors.primaryForeground || '#fff' }]}>Add</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
-      <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Feather name="search" size={18} color={colors.mutedForeground} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.foreground }]}
-          placeholder="Search medications..."
-          placeholderTextColor={colors.mutedForeground}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Feather name="x" size={18} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
+        For personal tracking only. Not medical advice. Always follow your clinician’s instructions.
+      </Text>
 
-      {filtered.length === 0 ? (
-        <View style={styles.empty}>
-          <Feather name="package" size={56} color={colors.mutedForeground} />
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-            {search ? 'No matches' : 'No medications yet'}
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {isLoading ? (
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 40 }}>
+            Loading…
           </Text>
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-            {search
-              ? 'Try a different search term'
-              : 'Add your first medication to start tracking'}
-          </Text>
-          {!search && (
-            <TouchableOpacity
-              style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-              onPress={openAdd}
-            >
-              <Text style={{ color: colors.primaryForeground, fontWeight: '600' }}>
-                Add Medication
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id?.toString() || item.name}
-          renderItem={renderItem}
-          contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-
-      {/* Add / Edit Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1, backgroundColor: colors.background }}
-        >
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 16 }}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-              {editingMed ? 'Edit Medication' : 'Add Medication'}
+        ) : medications.length === 0 ? (
+          <View style={styles.empty}>
+            <Feather name="package" size={40} color={colors.mutedForeground} />
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No medications yet</Text>
+            <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+              Tap Add to record a medication you take.
             </Text>
-            <TouchableOpacity onPress={handleSave}>
-              <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Save</Text>
-            </TouchableOpacity>
           </View>
-
-          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.mutedForeground }]}>Name *</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border }]}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Amlodipine"
-                placeholderTextColor={colors.mutedForeground}
-                autoFocus
+        ) : (
+          <>
+            {activeMeds.length > 0 && (
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Active</Text>
+            )}
+            {activeMeds.map((med) => (
+              <MedCard
+                key={med.id}
+                med={med}
+                colors={colors}
+                onEdit={() => openEdit(med)}
+                onToggle={() => med.id != null && toggleActive(med.id)}
+                onDelete={() => confirmDelete(med)}
               />
-            </View>
+            ))}
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.mutedForeground }]}>Dosage *</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border }]}
-                value={dosage}
-                onChangeText={setDosage}
-                placeholder="e.g. 5 mg"
-                placeholderTextColor={colors.mutedForeground}
+            {inactiveMeds.length > 0 && (
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground, marginTop: 20 }]}>
+                Inactive
+              </Text>
+            )}
+            {inactiveMeds.map((med) => (
+              <MedCard
+                key={med.id}
+                med={med}
+                colors={colors}
+                onEdit={() => openEdit(med)}
+                onToggle={() => med.id != null && toggleActive(med.id)}
+                onDelete={() => confirmDelete(med)}
               />
-            </View>
+            ))}
+          </>
+        )}
+      </ScrollView>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.mutedForeground }]}>Frequency</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border }]}
-                value={frequency}
-                onChangeText={setFrequency}
-                placeholder="Once daily"
-                placeholderTextColor={colors.mutedForeground}
-              />
-            </View>
+      {/* Add / Edit Modal — real inputs */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+              {editing ? 'Edit Medication' : 'Add Medication'}
+            </Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.mutedForeground }]}>Notes</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.textArea,
-                  { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border },
-                ]}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Optional notes"
-                placeholderTextColor={colors.mutedForeground}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Name *</Text>
+            <TextInput
+              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Lisinopril"
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="words"
+            />
+
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Dosage *</Text>
+            <TextInput
+              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={dosage}
+              onChangeText={setDosage}
+              placeholder="e.g. 10 mg"
+              placeholderTextColor={colors.mutedForeground}
+            />
+
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Frequency *</Text>
+            <TextInput
+              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={frequency}
+              onChangeText={setFrequency}
+              placeholder="e.g. Once daily"
+              placeholderTextColor={colors.mutedForeground}
+            />
+
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Start date</Text>
+            <TextInput
+              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={startDate}
+              onChangeText={setStartDate}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.mutedForeground}
+            />
+
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Notes</Text>
+            <TextInput
+              style={[styles.input, styles.notesInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Optional notes"
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+            />
 
             <View style={styles.switchRow}>
-              <Text style={[styles.label, { color: colors.mutedForeground, marginBottom: 0 }]}>
-                Active
-              </Text>
+              <Text style={{ color: colors.foreground }}>Active</Text>
               <Switch
-                value={isActive}
-                onValueChange={setIsActive}
+                value={active}
+                onValueChange={setActive}
                 trackColor={{ false: colors.border, true: colors.primary }}
               />
             </View>
 
-            {editingMed && (
+            {formError ? (
+              <Text style={{ color: colors.crisis || '#EF4444', marginBottom: 8 }}>{formError}</Text>
+            ) : null}
+
+            <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.deleteBtn}
-                onPress={() => {
-                  setModalVisible(false);
-                  handleDelete(editingMed);
-                }}
+                style={[styles.cancelBtn, { borderColor: colors.border }]}
+                onPress={() => setModalVisible(false)}
               >
-                <Text style={{ color: colors.crisis, fontWeight: '600' }}>Delete Medication</Text>
+                <Text style={{ color: colors.mutedForeground }}>Cancel</Text>
               </TouchableOpacity>
-            )}
-          </ScrollView>
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                <Text style={{ color: colors.primaryForeground || '#fff', fontWeight: '600' }}>
+                  {saving ? 'Saving…' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </View>
   );
 }
 
+function MedCard({
+  med,
+  colors,
+  onEdit,
+  onToggle,
+  onDelete,
+}: {
+  med: Medication;
+  colors: ReturnType<typeof useColors>;
+  onEdit: () => void;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.medName, { color: colors.foreground }]}>{med.name}</Text>
+        <Text style={{ color: colors.mutedForeground, marginTop: 2 }}>
+          {med.dosage} · {med.frequency}
+        </Text>
+        {med.notes ? (
+          <Text style={{ color: colors.mutedForeground, marginTop: 4, fontSize: 13 }} numberOfLines={2}>
+            {med.notes}
+          </Text>
+        ) : null}
+      </View>
+      <View style={styles.cardActions}>
+        <Switch
+          value={med.active}
+          onValueChange={onToggle}
+          trackColor={{ false: colors.border, true: colors.primary }}
+        />
+        <TouchableOpacity onPress={onEdit} hitSlop={10} style={{ padding: 6 }}>
+          <Feather name="edit-2" size={18} color={colors.mutedForeground} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onDelete} hitSlop={10} style={{ padding: 6 }}>
+          <Feather name="trash-2" size={18} color={colors.crisis || '#EF4444'} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1, paddingHorizontal: 20 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    marginBottom: 8,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
+  title: { fontSize: 28, fontWeight: '700' },
   addBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
-    borderWidth: 1,
-    gap: 10,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    padding: 0,
+  addBtnText: { fontWeight: '600', fontSize: 15 },
+  disclaimer: { fontSize: 12, marginBottom: 16, lineHeight: 17 },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
+  empty: { alignItems: 'center', marginTop: 60, paddingHorizontal: 24 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', marginTop: 16 },
+  emptySub: { fontSize: 14, textAlign: 'center', marginTop: 8 },
   card: {
     flexDirection: 'row',
-    borderRadius: 16,
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 12,
-    overflow: 'hidden',
-    alignItems: 'center',
+    marginBottom: 10,
   },
-  accent: {
-    width: 5,
-    alignSelf: 'stretch',
-  },
-  cardContent: {
+  medName: { fontSize: 16, fontWeight: '600' },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  modalOverlay: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
   },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+  modalCard: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
   },
-  medName: {
-    fontSize: 17,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  dosage: {
-    fontSize: 14,
-  },
-  notes: {
-    fontSize: 13,
-    marginTop: 4,
-  },
-  toggleBtn: {
-    padding: 14,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  emptyBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  modalContent: {
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 18,
-  },
-  label: {
-    fontSize: 14,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
+  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '500', marginBottom: 6, marginTop: 10 },
   input: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 14,
+    paddingHorizontal: 14,
+    height: 48,
     fontSize: 16,
   },
-  textArea: {
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
+  notesInput: { height: 80, textAlignVertical: 'top', paddingTop: 12 },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 16,
+    marginBottom: 8,
   },
-  deleteBtn: {
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  cancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
-    padding: 16,
-    marginTop: 12,
+    justifyContent: 'center',
+  },
+  saveBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

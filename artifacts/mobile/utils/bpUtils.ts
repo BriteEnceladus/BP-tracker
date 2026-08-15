@@ -1,6 +1,8 @@
 import { BPReading } from '../src/db';
 
-export function getBPCategory(systolic: number, diastolic: number): string {
+export type BPCategory = 'crisis' | 'stage2' | 'stage1' | 'elevated' | 'normal';
+
+export function getBPCategory(systolic: number, diastolic: number): BPCategory {
   if (systolic >= 180 || diastolic >= 120) return 'crisis';
   if (systolic >= 140 || diastolic >= 90) return 'stage2';
   if (systolic >= 130 || diastolic >= 80) return 'stage1';

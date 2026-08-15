@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   isEncryptionSetup,
   setupEncryption,
@@ -11,6 +11,7 @@ import {
   updateBiometricPassword,
   removeBiometric as removeBiometricStorage,
 } from "@/utils/bpStorage";
+import type { SessionCryptoKey } from "@/utils/crypto";
 
 export interface CryptoContextType {
   isSetup: boolean;
@@ -21,6 +22,7 @@ export interface CryptoContextType {
   biometricEnrolled: boolean;
   autoLockMinutes: number;
   failedUnlockAttempts: number;
+  lockoutRemainingMs: number;
   setAutoLockMinutes: (minutes: number) => void;
   setupPassword: (password: string) => Promise<void>;
   unlock: (password: string) => Promise<boolean>;
@@ -36,13 +38,14 @@ const CryptoContext = createContext<CryptoContextType | null>(null);
 export function CryptoProvider({ children }: { children: React.ReactNode }) {
   const [isSetup, setIsSetup] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [cryptoKey, setCryptoKey] = useState<CryptoKey | null>(null);
+  const [cryptoKey, setCryptoKey] = useState<SessionCryptoKey | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [biometricSupported, setBiometricSupported] = useState(false);
   const [biometricEnrolled, setBiometricEnrolled] = useState(false);
-  const [masterPassword, setMasterPassword] = useState("");
+  const passwordRef = useRef("");
   const [autoLockMinutes, setAutoLockMinutesState] = useState(10);
   const [failedUnlockAttempts, setFailedUnlockAttempts] = useState(0);
+  const [lockoutRemainingMs] = useState(0);
 
   const setAutoLockMinutes = useCallback((minutes: number) => {
     setAutoLockMinutesState(Math.max(1, Math.min(60, minutes)));
@@ -66,7 +69,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
     const key = (await setupEncryption(password)) as CryptoKey;
     setIsSetup(true);
     setCryptoKey(key);
-    setMasterPassword(password);
+    passwordRef.current = password;
     setIsUnlocked(true);
   }, []);
 
@@ -74,7 +77,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
     const key = (await unlockWithPassword(password)) as CryptoKey | null;
     if (key) {
       setCryptoKey(key);
-      setMasterPassword(password);
+      passwordRef.current = password;
       setIsUnlocked(true);
       setFailedUnlockAttempts(0);
       return true;
@@ -91,7 +94,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
       const key = (await unlockWithPassword(password)) as CryptoKey | null;
       if (!key) return false;
       setCryptoKey(key);
-      setMasterPassword(password);
+      passwordRef.current = password;
       setIsUnlocked(true);
       setFailedUnlockAttempts(0);
       return true;
@@ -102,7 +105,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
 
   const lock = useCallback(() => {
     setCryptoKey(null);
-    setMasterPassword("");
+    passwordRef.current = "";
     setIsUnlocked(false);
   }, []);
 
@@ -113,7 +116,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
       if (!verified) throw new Error("Incorrect current password");
       const newKey = (await changeEncryptionPassword(cryptoKey, newPassword)) as CryptoKey;
       setCryptoKey(newKey);
-      setMasterPassword(newPassword);
+      passwordRef.current = newPassword;
       if (biometricEnrolled) {
         await updateBiometricPassword(newPassword);
       }
@@ -122,10 +125,10 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
   );
 
   const enrollBiometric = useCallback(async () => {
-    if (!masterPassword) throw new Error("Must be unlocked to enroll biometrics");
-    await enrollBiometricStorage(masterPassword);
+    if (!passwordRef.current) throw new Error("Must be unlocked to enroll biometrics");
+    await enrollBiometricStorage(passwordRef.current);
     setBiometricEnrolled(true);
-  }, [masterPassword]);
+  }, []);
 
   const removeBiometric = useCallback(async () => {
     await removeBiometricStorage();
@@ -167,6 +170,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
         biometricEnrolled,
         autoLockMinutes,
         failedUnlockAttempts,
+        lockoutRemainingMs,
         setAutoLockMinutes,
         setupPassword,
         unlock,

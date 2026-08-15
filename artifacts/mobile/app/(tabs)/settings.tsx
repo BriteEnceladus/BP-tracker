@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,185 +7,283 @@ import {
   Switch,
   ScrollView,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
-import * as Notifications from 'expo-notifications';
+import { useMeds } from '../../context/MedsContext';
+import { useCrypto } from '../../context/CryptoContext';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { readingsToCsv } from '../../utils/csvExport';
+import { shareCsvFile } from '../../utils/csvShare';
+import { isDailyReminderEnabled, setDailyReminderEnabled } from '../../utils/reminders';
+import * as readingsStore from '../../src/readingsStore';
+import * as medsStore from '../../src/medsStore';
+
+const PRIVACY_URL =
+  'https://github.com/BriteEnceladus/BP-tracker/blob/main/PRIVACY.md';
 
 export default function SettingsScreen() {
   const colors = useColors();
-  const { readings, deleteReading } = useBP();
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [aiInsightsEnabled, setAiInsightsEnabled] = useState(false); // Phase 2 - default OFF
+  const insets = useSafeAreaInsets();
+  const { readings, refresh } = useBP();
+  const { medications, refresh: refreshMeds } = useMeds();
+  const {
+    biometricSupported,
+    biometricEnrolled,
+    enrollBiometric,
+    removeBiometric,
+    autoLockMinutes,
+    setAutoLockMinutes,
+    lock,
+  } = useCrypto();
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderBusy, setReminderBusy] = useState(false);
+
+  useEffect(() => {
+    isDailyReminderEnabled().then(setReminderEnabled).catch(() => {});
+  }, []);
+
+  const toggleReminder = async (value: boolean) => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Not available on web', 'Daily reminders are available in the Android and iOS apps.');
+      return;
+    }
+    setReminderBusy(true);
+    try {
+      await setDailyReminderEnabled(value);
+      setReminderEnabled(value);
+      Alert.alert(
+        value ? 'Reminder Enabled' : 'Reminder Disabled',
+        value ? 'You will get a local notification every day at 8:00 AM.' : undefined
+      );
+    } catch {
+      setReminderEnabled(false);
+      Alert.alert('Permission needed', 'Enable notifications to set a daily reminder.');
+    } finally {
+      setReminderBusy(false);
+    }
+  };
+
+  const toggleBiometric = async (value: boolean) => {
+    try {
+      if (value) {
+        await enrollBiometric();
+      } else {
+        await removeBiometric();
+      }
+    } catch {
+      Alert.alert(
+        'Biometric setup failed',
+        'Unlock with your password first, then try enabling biometrics again.'
+      );
+    }
+  };
+
+  const exportCsv = async () => {
+    if (readings.length === 0) {
+      Alert.alert('No Data', 'There are no readings to export.');
+      return;
+    }
+    try {
+      const csv = readingsToCsv(readings);
+      const fileName = `bp_readings_${new Date().toISOString().split('T')[0]}.csv`;
+      await shareCsvFile(csv, fileName);
+    } catch {
+      Alert.alert('Export Failed', 'Unable to export the CSV file. Please try again.');
+    }
+  };
 
   const clearAllData = () => {
     Alert.alert(
       'Clear All Data?',
-      'This will permanently delete all your readings. This cannot be undone.',
+      `This permanently deletes ${readings.length} reading(s) and ${medications.length} medication(s) on this device. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete Everything',
           style: 'destructive',
           onPress: async () => {
-            for (const reading of readings) {
-              if (reading.id) await deleteReading(reading.id);
+            try {
+              await readingsStore.clearAllReadings();
+              await medsStore.clearAllMedications();
+              await refresh();
+              await refreshMeds();
+              Alert.alert('Data Cleared', 'All readings and medications have been deleted.');
+            } catch {
+              Alert.alert('Error', 'Could not clear all data.');
             }
-            Alert.alert('Data Cleared', 'All readings have been deleted.');
           },
         },
       ]
     );
   };
 
-  const toggleReminder = async (value: boolean) => {
-    setReminderEnabled(value);
-    if (value) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Time to log your BP',
-          body: "Don't forget to record your blood pressure today.",
-        },
-        trigger: { hour: 8, minute: 0, repeats: true },
-      });
-      Alert.alert('Reminder Enabled', 'Daily reminder set for 8:00 AM.');
-    } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      Alert.alert('Reminder Disabled');
+  const openPrivacy = async () => {
+    try {
+      await Linking.openURL(PRIVACY_URL);
+    } catch {
+      Alert.alert('Unable to open', 'Please visit the GitHub repository for the Privacy Policy.');
     }
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 40 }}
+    >
       <Text style={[styles.title, { color: colors.foreground }]}>Settings</Text>
 
-      {/* Security */}
-      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Security</Text>
-        
-        <View style={[styles.row, { borderTopColor: colors.border }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Feather name="lock" size={18} color={colors.primary} />
-            <Text style={{ color: colors.foreground }}>Encryption Status</Text>
-          </View>
-          <Text style={{ color: colors.normal, fontWeight: '600' }}>AES-256-GCM Active</Text>
-        </View>
-
-        <View style={[styles.row, { borderTopColor: colors.border }]}>
-          <Text style={{ color: colors.foreground }}>Biometric Login</Text>
-          <Switch
-            value={true}
-            onValueChange={() => {}}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-
-        <View style={[styles.row, { borderTopColor: colors.border }]}>
-          <Text style={{ color: colors.foreground }}>Auto-Lock Timeout</Text>
-          <Text style={{ color: colors.mutedForeground }}>5 minutes</Text>
-        </View>
-      </View>
-
-      {/* Privacy / AI Insights (Phase 2 ready) */}
-      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Privacy</Text>
-        
-        <View style={[styles.row, { borderTopColor: colors.border }]}>
-          <Text style={{ color: colors.foreground }}>Enable AI Insights</Text>
-          <Switch
-            value={aiInsightsEnabled}
-            onValueChange={setAiInsightsEnabled}
-            trackColor={{ false: colors.border, true: colors.primary }}
-          />
-        </View>
-        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Only anonymized summary data is sent when enabled. Full control stays with you. Default is OFF.
+      <View style={[styles.notice, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Feather name="alert-circle" size={18} color={colors.primary} />
+        <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>
+          BP Tracker is a personal wellness tracking tool only. It is{' '}
+          <Text style={{ fontWeight: '700', color: colors.foreground }}>not a regulated medical device</Text>
+          {' '}and does not diagnose, treat, or replace professional medical advice.
         </Text>
       </View>
 
-      {/* Reminders */}
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Privacy & Security</Text>
+
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground }}>Data location</Text>
+          <Text style={{ color: colors.normal, fontWeight: '600' }}>On this device only</Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground }}>Encryption</Text>
+          <Text style={{ color: colors.mutedForeground }}>AES-256-GCM</Text>
+        </View>
+
+        {biometricSupported ? (
+          <View style={styles.row}>
+            <Text style={{ color: colors.foreground }}>Biometric unlock</Text>
+            <Switch
+              value={biometricEnrolled}
+              onValueChange={toggleBiometric}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
+        ) : null}
+
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground }}>Auto-lock</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {[5, 10, 15].map((mins) => (
+              <TouchableOpacity
+                key={mins}
+                onPress={() => setAutoLockMinutes(mins)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: autoLockMinutes === mins ? colors.primary : colors.background,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: autoLockMinutes === mins ? colors.primaryForeground : colors.foreground,
+                    fontSize: 12,
+                  }}
+                >
+                  {mins}m
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.row} onPress={lock}>
+          <Text style={{ color: colors.foreground }}>Lock now</Text>
+          <Feather name="lock" size={18} color={colors.mutedForeground} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.row} onPress={openPrivacy}>
+          <Text style={{ color: colors.foreground }}>Privacy Policy</Text>
+          <Feather name="external-link" size={18} color={colors.mutedForeground} />
+        </TouchableOpacity>
+      </View>
+
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Reminders</Text>
-        
-        <View style={[styles.row, { borderTopColor: colors.border }]}>
+
+        <View style={styles.row}>
           <Text style={{ color: colors.foreground }}>Daily Reminder</Text>
           <Switch
             value={reminderEnabled}
             onValueChange={toggleReminder}
+            disabled={reminderBusy}
             trackColor={{ false: colors.border, true: colors.primary }}
           />
         </View>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Get a notification every day at 8:00 AM
+          Local notification at 8:00 AM. Nothing is sent off your device.
         </Text>
       </View>
 
-      {/* Data Management */}
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Data</Text>
-        
-        <TouchableOpacity style={[styles.row, { borderTopColor: colors.border }]} onPress={() => { /* CSV Export already in History */ }}>
-          <Text style={{ color: colors.foreground }}>Export Data (CSV)</Text>
-          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
-        </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.row, { borderTopColor: colors.border }]} onPress={() => Alert.alert('Import', 'CSV Import coming soon in Settings!')}>
-          <Text style={{ color: colors.foreground }}>Import from CSV</Text>
-          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+        <TouchableOpacity style={styles.row} onPress={exportCsv}>
+          <Text style={{ color: colors.foreground }}>Export readings (CSV)</Text>
+          <Feather name="download" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
+        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+          CSV files are plaintext. Treat exported files as sensitive.
+        </Text>
 
-        <TouchableOpacity style={[styles.row, { borderTopColor: colors.border }]} onPress={clearAllData}>
+        <TouchableOpacity style={styles.row} onPress={clearAllData}>
           <Text style={{ color: colors.crisis }}>Clear All Data</Text>
-          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+          <Feather name="trash-2" size={18} color={colors.crisis} />
         </TouchableOpacity>
       </View>
 
-      {/* About */}
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>About</Text>
-        
-        <View style={[styles.row, { borderTopColor: colors.border }]}>
+
+        <View style={styles.row}>
           <Text style={{ color: colors.foreground }}>Version</Text>
           <Text style={{ color: colors.mutedForeground }}>1.0.0</Text>
         </View>
 
-        <TouchableOpacity style={[styles.row, { borderTopColor: colors.border }]}>
-          <Text style={{ color: colors.foreground }}>Privacy Policy</Text>
-          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.row, { borderTopColor: colors.border }]}>
-          <Text style={{ color: colors.foreground }}>Terms of Service</Text>
-          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
-        </TouchableOpacity>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground }}>Medical device?</Text>
+          <Text style={{ color: colors.mutedForeground }}>No</Text>
+        </View>
       </View>
 
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-        Your data stays on your device. We never see or store it.\nBP Tracker is not a substitute for professional medical advice.
+        Your data stays on your device. We never see, store, or transmit it.
       </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
+  container: { flex: 1, paddingHorizontal: 20 },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 16 },
+  notice: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 20,
+    alignItems: 'flex-start',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 24,
-  },
+  noticeText: { flex: 1, fontSize: 13, lineHeight: 19 },
   section: {
     borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 24,
+    marginBottom: 20,
     overflow: 'hidden',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     padding: 16,
     paddingBottom: 8,
@@ -194,19 +292,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderTopWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E2E8F0',
+  },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   hint: {
     fontSize: 13,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 14,
   },
   footer: {
     textAlign: 'center',
     fontSize: 13,
-    marginTop: 20,
-    marginBottom: 40,
-    lineHeight: 20,
+    marginTop: 8,
+    lineHeight: 18,
   },
 });

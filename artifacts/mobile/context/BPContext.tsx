@@ -1,13 +1,26 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { liveQuery } from 'dexie';
-import { db, BPReading } from '../src/db';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
+import { Platform } from 'react-native';
+import { BPReading } from '../src/db';
+import * as store from '../src/readingsStore';
+import { useCrypto } from './CryptoContext';
+import { type SessionCryptoKey } from '../utils/readingEncryption';
+import { BPReadingInput } from '../src/schemas';
+import { runMigrationIfNeeded } from '../src/migration';
 
 interface BPContextType {
   readings: BPReading[];
   isLoading: boolean;
-  addReading: (reading: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateReading: (id: number, updates: Partial<BPReading>) => Promise<void>;
+  addReading: (reading: BPReadingInput) => Promise<void>;
+  updateReading: (id: number, updates: Partial<BPReadingInput>) => Promise<void>;
   deleteReading: (id: number) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 const BPContext = createContext<BPContextType | undefined>(undefined);
@@ -15,55 +28,85 @@ const BPContext = createContext<BPContextType | undefined>(undefined);
 export function BPProvider({ children }: { children: ReactNode }) {
   const [readings, setReadings] = useState<BPReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { cryptoKey, isUnlocked } = useCrypto();
 
-  // Use Dexie's liveQuery for automatic reactive updates
-  useEffect(() => {
-    const subscription = liveQuery(() =>
-      db.readings.orderBy('timestamp').reverse().toArray()
-    ).subscribe({
-      next: (result) => {
-        setReadings(result);
-        setIsLoading(false);
-      },
-      error: (err) => {
-        console.error('Dexie liveQuery error:', err);
-        setIsLoading(false);
-      },
-    });
+  const getKey = useCallback(() => {
+    if (!cryptoKey || !isUnlocked) {
+      throw new Error('Cannot access encrypted data without valid session key');
+    }
+    return cryptoKey as SessionCryptoKey;
+  }, [cryptoKey, isUnlocked]);
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const addReading = async (readingData: Omit<BPReading, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const now = new Date().toISOString();
-    const newReading: BPReading = {
-      ...readingData,
-      createdAt: now,
-      updatedAt: now,
-    };
-
+  const refresh = useCallback(async () => {
+    if (!isUnlocked || !cryptoKey) {
+      setReadings([]);
+      setIsLoading(false);
+      return;
+    }
     try {
-      await db.readings.add(newReading);
-      // No manual refresh needed - liveQuery handles reactivity automatically
+      const key = getKey();
+      const data = await store.getAllReadings(key);
+      setReadings(data);
+    } catch (e) {
+      console.error('[BPContext] refresh failed', e);
+      setReadings([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getKey, isUnlocked, cryptoKey]);
+
+  useEffect(() => {
+    if (!isUnlocked || !cryptoKey) {
+      // Wipe plaintext from React state + store memory cache on lock
+      setReadings([]);
+      setIsLoading(false);
+      if (typeof (store as any).clearMemoryCache === 'function') {
+        (store as any).clearMemoryCache();
+      }
+      return;
+    }
+
+    runMigrationIfNeeded(cryptoKey as SessionCryptoKey).catch(console.warn);
+
+    if (Platform.OS === 'web' && 'subscribeToReadings' in store) {
+      const key = cryptoKey as SessionCryptoKey;
+      const unsub = (store as any).subscribeToReadings(
+        (result: BPReading[]) => {
+          setReadings(result);
+          setIsLoading(false);
+        },
+        (err: any) => {
+          console.error('Dexie liveQuery error:', err);
+          setIsLoading(false);
+        },
+        key
+      );
+      return unsub;
+    }
+
+    refresh();
+  }, [refresh, isUnlocked, cryptoKey]);
+
+  const addReading = async (readingData: BPReadingInput) => {
+    try {
+      const key = getKey();
+      await store.addReading(readingData, key);
+      if (Platform.OS !== 'web') {
+        await refresh();
+      }
     } catch (error) {
       console.error('Failed to add reading:', error);
       throw error;
     }
   };
 
-  const updateReading = async (id: number, updates: Partial<BPReading>) => {
+  const updateReading = async (id: number, updates: Partial<BPReadingInput>) => {
     try {
-      const existing = await db.readings.get(id);
-      if (!existing) throw new Error('Reading not found');
-
-      const updated = {
-        ...existing,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await db.readings.put(updated);
-      // liveQuery automatically updates all subscribed components
+      const key = getKey();
+      await store.updateReading(id, updates, key);
+      if (Platform.OS !== 'web') {
+        await refresh();
+      }
     } catch (error) {
       console.error('Failed to update reading:', error);
       throw error;
@@ -72,8 +115,11 @@ export function BPProvider({ children }: { children: ReactNode }) {
 
   const deleteReading = async (id: number) => {
     try {
-      await db.readings.delete(id);
-      // liveQuery handles UI updates automatically
+      const key = getKey();
+      await store.deleteReading(id, key);
+      if (Platform.OS !== 'web') {
+        await refresh();
+      }
     } catch (error) {
       console.error('Failed to delete reading:', error);
       throw error;
@@ -88,6 +134,7 @@ export function BPProvider({ children }: { children: ReactNode }) {
         addReading,
         updateReading,
         deleteReading,
+        refresh,
       }}
     >
       {children}

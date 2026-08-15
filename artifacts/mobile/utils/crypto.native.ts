@@ -1,3 +1,24 @@
+/**
+ * Native crypto helpers using react-native-quick-crypto.
+ * Provides real AES-256-GCM (authenticated encryption) + PBKDF2 for consistency with web.
+ *
+ * - Uses the library's Web Crypto compatible API (subtle).
+ * - Master key (CryptoKey) lives only in memory.
+ * - IV is always 12 bytes (96 bits), randomly generated per encryption.
+ * - All operations are binary-safe.
+ * - This replaces the previous non-GCM HMAC-based verifier.
+ */
+
+import QuickCrypto from 'react-native-quick-crypto';
+
+// Polyfill random values if not present (quick-crypto helps here)
+import 'react-native-get-random-values'; // fallback safety for crypto.getRandomValues
+
+// Make sure global crypto is available
+if (typeof global.crypto === 'undefined') {
+  (global as any).crypto = QuickCrypto;
+}
+
 export type SessionCryptoKey = CryptoKey;
 
 export interface EncryptedData {
@@ -12,8 +33,10 @@ export interface PasswordStrength {
   feedback: string;
 }
 
+// ---------- Base64 helpers (binary safe) ----------
+
 function uint8ArrayToBase64(bytes: Uint8Array): string {
-  let binary = "";
+  let binary = '';
   const chunkSize = 0x8000;
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize);
@@ -48,31 +71,32 @@ export function generateSalt(): string {
 export async function deriveKey(password: string, saltBase64: string): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
-    "raw",
+    'raw',
     enc.encode(password),
-    "PBKDF2",
+    'PBKDF2',
     false,
-    ["deriveKey"]
+    ['deriveKey']
   );
+
   return crypto.subtle.deriveKey(
     {
-      name: "PBKDF2",
+      name: 'PBKDF2',
       salt: base64ToBuffer(saltBase64),
       iterations: 100_000,
-      hash: "SHA-256",
+      hash: 'SHA-256',
     },
     keyMaterial,
-    { name: "AES-GCM", length: 256 },
+    { name: 'AES-GCM', length: 256 },
     false,
-    ["encrypt", "decrypt"]
+    ['encrypt', 'decrypt']
   );
 }
 
 export async function encryptData(key: CryptoKey, plaintext: string): Promise<EncryptedData> {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
   const enc = new TextEncoder();
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: 'AES-GCM', iv },
     key,
     enc.encode(plaintext)
   );
@@ -84,14 +108,14 @@ export async function encryptData(key: CryptoKey, plaintext: string): Promise<En
 
 export async function decryptData(key: CryptoKey, data: EncryptedData): Promise<string> {
   const plaintext = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: base64ToBuffer(data.iv) },
+    { name: 'AES-GCM', iv: base64ToBuffer(data.iv) },
     key,
     base64ToBuffer(data.payload)
   );
   return new TextDecoder().decode(plaintext);
 }
 
-const VERIFIER_TEXT = "BP_TRACKER_V1_OK";
+const VERIFIER_TEXT = 'BP_TRACKER_V1_OK';
 
 export async function createVerifier(key: CryptoKey): Promise<EncryptedData> {
   return encryptData(key, VERIFIER_TEXT);
@@ -117,11 +141,11 @@ export function getPasswordStrength(password: string): PasswordStrength {
   score = Math.min(4, score);
 
   const levels = [
-    { label: "Weak", color: "#EF4444", feedback: "Use at least 12 characters with mixed case, numbers & symbols" },
-    { label: "Fair", color: "#F97316", feedback: "Add more length and variety (uppercase, numbers, symbols)" },
-    { label: "Good", color: "#EAB308", feedback: "Good — consider making it longer for better security" },
-    { label: "Strong", color: "#22C55E", feedback: "Strong password!" },
-    { label: "Very Strong", color: "#16A34A", feedback: "Excellent — very secure!" },
+    { label: 'Weak', color: '#EF4444', feedback: 'Use at least 12 characters with mixed case, numbers & symbols' },
+    { label: 'Fair', color: '#F97316', feedback: 'Add more length and variety (uppercase, numbers, symbols)' },
+    { label: 'Good', color: '#EAB308', feedback: 'Good — consider making it longer for better security' },
+    { label: 'Strong', color: '#22C55E', feedback: 'Strong password!' },
+    { label: 'Very Strong', color: '#16A34A', feedback: 'Excellent — very secure!' },
   ];
 
   return { score: score as 0 | 1 | 2 | 3 | 4, ...levels[score] };

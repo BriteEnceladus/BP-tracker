@@ -17,19 +17,10 @@ import { BPCard } from "@/components/BPCard";
 import { BPChart } from "@/components/BPChart";
 import { StatCard } from "@/components/StatCard";
 import {
-  getBPCategory,
   getReadingsForDays,
   getAverages,
 } from "@/utils/bpUtils";
-import * as Notifications from 'expo-notifications';
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+import { setDailyReminderEnabled } from "@/utils/reminders";
 
 export default function DashboardScreen() {
   const colors = useColors();
@@ -65,29 +56,15 @@ export default function DashboardScreen() {
 
   const setDailyReminder = async () => {
     try {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please enable notifications to set reminders.');
-        return;
-      }
-
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Time to log your BP",
-          body: "Don't forget to record your blood pressure and heart rate today.",
-          sound: true,
-        },
-        trigger: {
-          hour: 8,
-          minute: 0,
-          repeats: true,
-        },
-      });
-
+      await setDailyReminderEnabled(true);
       Alert.alert('Reminder Set', 'You will get a daily notification at 8:00 AM.');
-    } catch (error) {
-      Alert.alert('Error', 'Could not set the reminder.');
+    } catch {
+      Alert.alert(
+        Platform.OS === 'web' ? 'Not available on web' : 'Permission needed',
+        Platform.OS === 'web'
+          ? 'Daily reminders are available in the Android and iOS apps.'
+          : 'Please enable notifications to set reminders.'
+      );
     }
   };
 

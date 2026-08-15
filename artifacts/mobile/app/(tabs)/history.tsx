@@ -15,10 +15,11 @@ import { BPCard } from '../../components/BPCard';
 import { BPChart } from '../../components/BPChart';
 import { StatCard } from '../../components/StatCard';
 import { getReadingsForDays, getAverages } from '../../utils/bpUtils';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import { readingsToCsv } from '../../utils/csvExport';
+import { shareCsvFile } from '../../utils/csvShare';
+import { BPReading } from '../../src/schemas';
 import { Feather } from '@expo/vector-icons';
-import { Swipeable } from 'react-native-gesture-handler/Swipeable';
+import { Swipeable } from 'react-native-gesture-handler';
 
 type Range = 7 | 30 | 90 | 0;
 
@@ -33,8 +34,8 @@ export default function HistoryScreen() {
   const colors = useColors();
   const { readings, isLoading, deleteReading, addReading } = useBP();
   const [range, setRange] = useState<Range>(30);
-  const [recentlyDeleted, setRecentlyDeleted] = useState<any>(null);
-  const [undoTimeout, setUndoTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<BPReading | null>(null);
+  const [undoTimeout, setUndoTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredReadings = useMemo(() => getReadingsForDays(readings, range), [readings, range]);
 
@@ -54,38 +55,10 @@ export default function HistoryScreen() {
       return;
     }
 
-    const header = 'Timestamp,Systolic (mmHg),Diastolic (mmHg),Heart Rate (bpm),Notes,Medication Taken\n';
-    const rows = sortedReadings
-      .map((r) => {
-        const ts = new Date(r.timestamp).toISOString();
-        const hr = r.heartRate ?? '';
-        const notes = r.notes ? `"${r.notes.replace(/"/g, '""')}"` : '';
-        const med = r.medicationTaken ? 'Yes' : 'No';
-        return `${ts},${r.systolic},${r.diastolic},${hr},${notes},${med}`;
-      })
-      .join('\n');
-
-    const csvContent = header + rows;
-
     try {
+      const csvContent = readingsToCsv(sortedReadings);
       const fileName = `bp_readings_${new Date().toISOString().split('T')[0]}.csv`;
-      const fileUri = FileSystem.documentDirectory + fileName;
-
-      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Export Blood Pressure Readings',
-        });
-      } else {
-        Alert.alert(
-          'Export Complete',
-          `CSV file saved to your device at:\n${fileUri}`
-        );
-      }
+      await shareCsvFile(csvContent, fileName);
     } catch (error) {
       console.error('CSV Export Error:', error);
       Alert.alert('Export Failed', 'Unable to export the CSV file. Please try again.');

@@ -4,15 +4,15 @@ A secure, standalone blood pressure and heart rate tracking app built with Expo.
 
 ## Features
 
-- Strong AES-256-GCM client-side encryption (web)
-- Biometric unlock (convenience)
+- Strong AES-256-GCM client-side encryption (per-reading, web + native)
+- Biometric unlock (convenience only — not a root of trust)
 - Charts and history with trend alerts
 - Full CRUD: add, edit, delete readings
 - Reading detail view
 - CSV export
 - Dark mode
 - PWA + Standalone APK support
-- Date/time picker and input validation
+- Date/time picker and input validation (Zod)
 
 ## Build Instructions
 

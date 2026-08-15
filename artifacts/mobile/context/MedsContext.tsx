@@ -1,14 +1,24 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { liveQuery } from 'dexie';
-import { db, Medication } from '../src/db';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
+import { Medication, MedicationInput } from '../src/schemas';
+import * as store from '../src/medsStore';
+import { useCrypto } from './CryptoContext';
+import type { SessionCryptoKey } from '../utils/crypto';
 
 interface MedsContextType {
   medications: Medication[];
   isLoading: boolean;
-  addMedication: (med: Omit<Medication, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateMedication: (id: number, updates: Partial<Medication>) => Promise<void>;
+  addMedication: (data: MedicationInput) => Promise<void>;
+  updateMedication: (id: number, updates: Partial<MedicationInput>) => Promise<void>;
   deleteMedication: (id: number) => Promise<void>;
   toggleActive: (id: number) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 const MedsContext = createContext<MedsContextType | undefined>(undefined);
@@ -16,78 +26,65 @@ const MedsContext = createContext<MedsContextType | undefined>(undefined);
 export function MedsProvider({ children }: { children: ReactNode }) {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { cryptoKey, isUnlocked } = useCrypto();
 
-  useEffect(() => {
-    const subscription = liveQuery(() =>
-      db.medications.orderBy('name').toArray()
-    ).subscribe({
-      next: (result) => {
-        setMedications(result);
-        setIsLoading(false);
-      },
-      error: (err) => {
-        console.error('Dexie liveQuery error (medications):', err);
-        setIsLoading(false);
-      },
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const addMedication = async (
-    medData: Omit<Medication, 'id' | 'createdAt' | 'updatedAt'>
-  ) => {
-    const now = new Date().toISOString();
-    const newMed: Medication = {
-      ...medData,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    try {
-      await db.medications.add(newMed);
-    } catch (error) {
-      console.error('Failed to add medication:', error);
-      throw error;
+  const getKey = useCallback((): SessionCryptoKey => {
+    if (!cryptoKey || !isUnlocked) {
+      throw new Error('Cannot access encrypted medications without session key');
     }
+    return cryptoKey as SessionCryptoKey;
+  }, [cryptoKey, isUnlocked]);
+
+  const refresh = useCallback(async () => {
+    if (!isUnlocked || !cryptoKey) {
+      setMedications([]);
+      setIsLoading(false);
+      return;
+    }
+    try {
+      const data = await store.getAllMedications(getKey());
+      setMedications(data);
+    } catch (e) {
+      console.error('[MedsContext] refresh failed', e);
+      setMedications([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getKey, isUnlocked, cryptoKey]);
+
+  // Load when unlocked; wipe plaintext state when locked
+  useEffect(() => {
+    if (!isUnlocked || !cryptoKey) {
+      setMedications([]);
+      setIsLoading(false);
+      if (typeof store.clearMemoryCache === 'function') {
+        store.clearMemoryCache();
+      }
+      return;
+    }
+    refresh();
+  }, [isUnlocked, cryptoKey, refresh]);
+
+  const addMedication = async (data: MedicationInput) => {
+    await store.addMedication(data, getKey());
+    await refresh();
   };
 
-  const updateMedication = async (id: number, updates: Partial<Medication>) => {
-    try {
-      const existing = await db.medications.get(id);
-      if (!existing) throw new Error('Medication not found');
-
-      const updated = {
-        ...existing,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await db.medications.put(updated);
-    } catch (error) {
-      console.error('Failed to update medication:', error);
-      throw error;
-    }
+  const updateMedication = async (id: number, updates: Partial<MedicationInput>) => {
+    await store.updateMedication(id, updates, getKey());
+    await refresh();
   };
 
   const deleteMedication = async (id: number) => {
-    try {
-      await db.medications.delete(id);
-    } catch (error) {
-      console.error('Failed to delete medication:', error);
-      throw error;
-    }
+    await store.deleteMedication(id, getKey());
+    await refresh();
   };
 
   const toggleActive = async (id: number) => {
-    try {
-      const existing = await db.medications.get(id);
-      if (!existing) throw new Error('Medication not found');
-      await updateMedication(id, { isActive: !existing.isActive });
-    } catch (error) {
-      console.error('Failed to toggle medication status:', error);
-      throw error;
-    }
+    const med = medications.find((m) => m.id === id);
+    if (!med) return;
+    await store.updateMedication(id, { active: !med.active }, getKey());
+    await refresh();
   };
 
   return (
@@ -99,6 +96,7 @@ export function MedsProvider({ children }: { children: ReactNode }) {
         updateMedication,
         deleteMedication,
         toggleActive,
+        refresh,
       }}
     >
       {children}
@@ -107,9 +105,7 @@ export function MedsProvider({ children }: { children: ReactNode }) {
 }
 
 export function useMeds() {
-  const context = useContext(MedsContext);
-  if (context === undefined) {
-    throw new Error('useMeds must be used within a MedsProvider');
-  }
-  return context;
+  const ctx = useContext(MedsContext);
+  if (!ctx) throw new Error('useMeds must be used within MedsProvider');
+  return ctx;
 }
