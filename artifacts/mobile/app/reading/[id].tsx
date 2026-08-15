@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'rea
 import { useLocalSearchParams, router } from 'expo-router';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
-import { getBPCategory, getCategoryLabel } from '../../utils/bpUtils';
+import { getBPCategory, getCategoryColor, getCategoryLabel } from '../../utils/bpUtils';
 import { Feather } from '@expo/vector-icons';
 
 export default function ReadingDetailScreen() {
@@ -27,6 +27,7 @@ export default function ReadingDetailScreen() {
 
   const category = getBPCategory(reading.systolic, reading.diastolic);
   const categoryLabel = getCategoryLabel(category);
+  const categoryColor = getCategoryColor(category, colors);
   const formattedDate = new Date(reading.timestamp).toLocaleString();
 
   const handleDelete = () => {
@@ -73,15 +74,15 @@ export default function ReadingDetailScreen() {
 
         <View style={styles.bpContainer}>
           <View style={styles.bpRow}>
-            <Text style={[styles.bpValue, { color: colors.foreground }]}>{reading.systolic}</Text>
+            <Text style={[styles.bpValue, { color: categoryColor }]}>{reading.systolic}</Text>
             <Text style={[styles.bpDivider, { color: colors.mutedForeground }]}>/</Text>
-            <Text style={[styles.bpValue, { color: colors.foreground }]}>{reading.diastolic}</Text>
+            <Text style={[styles.bpValue, { color: categoryColor }]}>{reading.diastolic}</Text>
           </View>
           <Text style={[styles.bpUnit, { color: colors.mutedForeground }]}>mmHg</Text>
         </View>
 
-        <View style={[styles.categoryBadge, { backgroundColor: colors[category] + '20', borderColor: colors[category] }]}>
-          <Text style={[styles.categoryText, { color: colors[category] }]}>{categoryLabel}</Text>
+        <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '20', borderColor: categoryColor }]}>
+          <Text style={[styles.categoryText, { color: categoryColor }]}>{categoryLabel}</Text>
         </View>
 
         {reading.heartRate && (

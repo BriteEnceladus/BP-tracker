@@ -1,6 +1,6 @@
 # Privacy Policy — BP Tracker
 
-**Last updated:** August 10, 2026  
+**Last updated:** August 14, 2026  
 **App:** BP Tracker (com.briteenceladus.bptracker)  
 **Developer:** BriteEnceladus
 
@@ -28,10 +28,10 @@ This data is encrypted on-device using AES-256-GCM before it is written to stora
 - No device identifiers sent anywhere
 - No location data used or transmitted
 - No analytics, crash reporting, or advertising SDKs
-- No health data is ever uploaded to any server
-- No third-party trackers
+- No health data is uploaded to us. There is no BP Tracker account or analytics backend.
+- No third-party trackers or advertising SDKs.
 
-Because nothing leaves your device, there is **no data sharing, selling, or processing by us or any third party**.
+**Optional Grok insights (off by default):** if you explicitly opt in and paste your own xAI API key, the app can send a *minimal anonymized summary* (latest systolic/diastolic/pulse, category, 7-day averages, 14-day category counts, and a coarse trend). Notes, exact timestamps, names, and identifiers are not included. That request goes from your device to `api.x.ai` using your key. Turn the feature off and remove the key at any time.
 
 ## 3. Encryption & security
 
@@ -44,7 +44,7 @@ Because nothing leaves your device, there is **no data sharing, selling, or proc
 ## 4. Permissions
 
 - **Biometrics / Face ID**: Used only to unlock the app for convenience. Optional.
-- **Notifications** (optional): Local daily reminder only. Never used for marketing.
+- **Notifications** (optional): Local measurement and medication reminders only. Never used for marketing.
 
 No other sensitive permissions are required.
 

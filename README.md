@@ -6,13 +6,12 @@ A secure, standalone blood pressure and heart rate tracking app built with Expo.
 
 - Strong AES-256-GCM client-side encryption (per-reading, web + native)
 - Biometric unlock (convenience only — not a root of trust)
-- Charts and history with trend alerts
-- Full CRUD: add, edit, delete readings
-- Reading detail view
-- CSV export
-- Dark mode
-- PWA + Standalone APK support
-- Date/time picker and input validation (Zod)
+- Color-coded readings, charts, and history with trend alerts
+- Optional Grok insights after a log (opt-in, anonymized payload, your xAI key)
+- Encrypted backup / restore and plaintext CSV / PDF export
+- Local measurement and medication reminders
+- Full CRUD: add, edit, delete readings and medications
+- Dark mode, PWA + Standalone APK support
 
 ## Build Instructions
 

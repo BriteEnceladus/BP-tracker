@@ -2,27 +2,17 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useColors } from '../hooks/useColors';
 import { BPReading } from '../src/db';
-import { getBPCategory, getCategoryLabel } from '../utils/bpUtils';
+import { getBPCategory, getCategoryColor, getCategoryLabel } from '../utils/bpUtils';
 
 interface BPCardProps {
   reading: BPReading;
 }
 
-export function BPCard({ reading }: BPCardProps) {
+function BPCardInner({ reading }: BPCardProps) {
   const colors = useColors();
   const categoryKey = getBPCategory(reading.systolic, reading.diastolic);
   const categoryLabel = getCategoryLabel(categoryKey);
-
-  const categoryColor =
-    categoryKey === 'normal'
-      ? colors.normal
-      : categoryKey === 'elevated'
-        ? colors.elevated
-        : categoryKey === 'stage1'
-          ? colors.stage1
-          : categoryKey === 'stage2'
-            ? colors.stage2
-            : colors.crisis;
+  const categoryColor = getCategoryColor(categoryKey, colors);
 
   return (
     <View
@@ -170,4 +160,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 12,
   },
+});
+
+export const BPCard = React.memo(BPCardInner, (prev, next) => {
+  return (
+    prev.reading.id === next.reading.id &&
+    prev.reading.timestamp === next.reading.timestamp &&
+    prev.reading.systolic === next.reading.systolic &&
+    prev.reading.diastolic === next.reading.diastolic &&
+    prev.reading.heartRate === next.reading.heartRate
+  );
 });

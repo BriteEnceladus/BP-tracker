@@ -6,16 +6,17 @@ interface StatCardProps {
   label: string;
   value: string | number;
   unit?: string;
+  accent?: string;
 }
 
-export function StatCard({ label, value, unit }: StatCardProps) {
+export function StatCard({ label, value, unit, accent }: StatCardProps) {
   const colors = useColors();
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderTopColor: accent || colors.border, borderTopWidth: accent ? 3 : 1 }]}>
       <Text style={[styles.label, { color: colors.mutedForeground }]}>{label}</Text>
       <View style={styles.row}>
-        <Text style={[styles.value, { color: colors.foreground }]}>{value}</Text>
+        <Text style={[styles.value, { color: accent || colors.foreground }]}>{value}</Text>
         {unit && <Text style={[styles.unit, { color: colors.mutedForeground }]}>{unit}</Text>}
       </View>
     </View>

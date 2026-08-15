@@ -19,6 +19,8 @@ import { StatCard } from "@/components/StatCard";
 import {
   getReadingsForDays,
   getAverages,
+  getBPCategory,
+  getCategoryColor,
 } from "@/utils/bpUtils";
 import { setDailyReminderEnabled } from "@/utils/reminders";
 
@@ -37,6 +39,10 @@ export default function DashboardScreen() {
 
   const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
   const averages = useMemo(() => getAverages(last7Days), [last7Days]);
+  const avgCategoryColor = useMemo(() => {
+    if (!averages.avgSystolic || !averages.avgDiastolic) return undefined;
+    return getCategoryColor(getBPCategory(averages.avgSystolic, averages.avgDiastolic), colors);
+  }, [averages, colors]);
 
   const recentReadings = sortedReadings.slice(0, 5);
 
@@ -132,9 +138,13 @@ export default function DashboardScreen() {
             <BPCard reading={latest} />
           ) : (
             <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={{ color: colors.mutedForeground }}>No readings yet</Text>
+              <Feather name="heart" size={28} color={colors.primary} />
+              <Text style={{ color: colors.foreground, fontWeight: '600', marginTop: 10 }}>No latest reading</Text>
+              <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 6 }}>
+                Sit quietly for 5 minutes, then log systolic, diastolic, and pulse.
+              </Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/log")}>
-                <Text style={{ color: colors.primary, marginTop: 8, fontWeight: '600' }}>Log your first reading →</Text>
+                <Text style={{ color: colors.primary, marginTop: 10, fontWeight: '600' }}>Log your first reading →</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -149,11 +159,13 @@ export default function DashboardScreen() {
                 label="Avg Systolic"
                 value={averages.avgSystolic || "--"}
                 unit="mmHg"
+                accent={avgCategoryColor}
               />
               <StatCard
                 label="Avg Diastolic"
                 value={averages.avgDiastolic || "--"}
                 unit="mmHg"
+                accent={avgCategoryColor}
               />
               <StatCard
                 label="Readings"

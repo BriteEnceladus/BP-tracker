@@ -14,7 +14,7 @@ import { useBP } from '../../context/BPContext';
 import { BPCard } from '../../components/BPCard';
 import { BPChart } from '../../components/BPChart';
 import { StatCard } from '../../components/StatCard';
-import { getReadingsForDays, getAverages } from '../../utils/bpUtils';
+import { getReadingsForDays, getAverages, getBPCategory, getCategoryColor } from '../../utils/bpUtils';
 import { readingsToCsv } from '../../utils/csvExport';
 import { shareCsvFile } from '../../utils/csvShare';
 import { BPReading } from '../../src/schemas';
@@ -48,6 +48,10 @@ export default function HistoryScreen() {
   );
 
   const averages = useMemo(() => getAverages(filteredReadings), [filteredReadings]);
+  const avgCategoryColor =
+    averages.avgSystolic && averages.avgDiastolic
+      ? getCategoryColor(getBPCategory(averages.avgSystolic, averages.avgDiastolic), colors)
+      : undefined;
 
   const exportToCSV = async () => {
     if (sortedReadings.length === 0) {
@@ -174,8 +178,12 @@ export default function HistoryScreen() {
 
       {sortedReadings.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={{ color: colors.mutedForeground, textAlign: 'center' }}>
-            No readings in this period.
+          <Feather name="calendar" size={36} color={colors.mutedForeground} />
+          <Text style={{ color: colors.foreground, fontWeight: '600', marginTop: 12, textAlign: 'center' }}>
+            No readings in this period
+          </Text>
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 6 }}>
+            Try a wider range, or log a reading to start your history.
           </Text>
         </View>
       ) : (
@@ -199,8 +207,8 @@ export default function HistoryScreen() {
 
               {/* Stats summary for bold feel */}
               <View style={styles.statsRow}>
-                <StatCard label="Avg Sys" value={averages.avgSystolic || '--'} unit="mmHg" />
-                <StatCard label="Avg Dia" value={averages.avgDiastolic || '--'} unit="mmHg" />
+                <StatCard label="Avg Sys" value={averages.avgSystolic || '--'} unit="mmHg" accent={avgCategoryColor} />
+                <StatCard label="Avg Dia" value={averages.avgDiastolic || '--'} unit="mmHg" accent={avgCategoryColor} />
                 <StatCard label="Readings" value={sortedReadings.length} />
               </View>
             </View>
@@ -216,6 +224,11 @@ export default function HistoryScreen() {
           )}
           contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews
+          updateCellsBatchingPeriod={50}
         />
       )}
 

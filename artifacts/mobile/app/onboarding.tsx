@@ -26,15 +26,27 @@ export default function OnboardingScreen() {
       highlight: 'Clear Insights',
     },
     {
+      icon: 'lock',
+      title: 'Set a strong master password',
+      description: 'Your password encrypts every reading. There is no reset. Write it down somewhere safe.',
+      highlight: 'AES-256-GCM',
+    },
+    {
+      icon: 'alert-circle',
+      title: 'Not a medical device',
+      description: 'BP Tracker is a personal log. It does not diagnose or treat. Share trends with your clinician.',
+      highlight: 'Wellness only',
+    },
+    {
       icon: 'clock',
       title: 'Build a simple daily habit',
-      description: 'Quick logging + optional daily reminders make tracking effortless and consistent.',
+      description: 'Quick logging and optional local reminders. Grok insights stay off until you opt in.',
       highlight: 'Easy & Consistent',
     },
     {
       icon: 'check-circle',
       title: "You're ready to start",
-      description: 'Take control of your health tracking with a tool that respects your privacy.',
+      description: 'Create your lock password on the next screen, then log your first reading.',
       highlight: 'All Set',
     },
   ];

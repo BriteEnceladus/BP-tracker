@@ -14,14 +14,22 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
-import { BPReading } from '../../src/db';
-import { getBPCategory, getCategoryLabel } from '../../utils/bpUtils';
+import { getBPCategory, getCategoryColor, getCategoryLabel } from '../../utils/bpUtils';
+import { useAiSettings } from '../../context/AiSettingsContext';
+import { buildAnonymizedInsightPayload } from '../../utils/aiPayload';
+import { fetchGrokInsight } from '../../utils/aiInsights';
+import { AiInsightModal } from '../../components/AiInsightModal';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { BPReadingInputSchema, parseWithSchema } from '../../src/schemas';
 
 export default function LogScreen() {
   const colors = useColors();
   const { readings, addReading, updateReading } = useBP();
+  const { insightsEnabled, hasApiKey, getApiKey } = useAiSettings();
+  const [insightOpen, setInsightOpen] = useState(false);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [insightText, setInsightText] = useState<string | null>(null);
+  const [insightError, setInsightError] = useState<string | null>(null);
   const params = useLocalSearchParams<{ id?: string }>();
 
   const editingReading = params.id
@@ -49,16 +57,7 @@ export default function LogScreen() {
     return {
       key,
       label: getCategoryLabel(key),
-      color:
-        key === 'normal'
-          ? colors.normal
-          : key === 'elevated'
-          ? colors.elevated
-          : key === 'stage1'
-          ? colors.stage1
-          : key === 'stage2'
-          ? colors.stage2
-          : colors.crisis,
+      color: getCategoryColor(key, colors),
     };
   }, [systolic, diastolic, colors]);
 
@@ -88,9 +87,38 @@ export default function LogScreen() {
     try {
       if (isEditing && editingReading?.id) {
         await updateReading(editingReading.id, readingData);
-      } else {
-        await addReading(readingData);
+        router.back();
+        return;
       }
+
+      await addReading(readingData);
+
+      if (insightsEnabled) {
+        if (!hasApiKey) {
+          Alert.alert(
+            'Add an xAI API key',
+            'Grok insights are on, but no API key is saved. Add one in Settings, or turn insights off.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+          return;
+        }
+        setInsightOpen(true);
+        setInsightLoading(true);
+        setInsightError(null);
+        try {
+          const key = await getApiKey();
+          if (!key) throw new Error('Missing API key');
+          const payload = buildAnonymizedInsightPayload(readingData, [...readings, { ...readingData, id: 0 }]);
+          const text = await fetchGrokInsight(key, payload);
+          setInsightText(text);
+        } catch {
+          setInsightError('Could not reach Grok. Your reading is saved on this device.');
+        } finally {
+          setInsightLoading(false);
+        }
+        return;
+      }
+
       router.back();
     } catch (error) {
       Alert.alert('Save Failed', 'Unable to save the reading. Please try again.');
@@ -240,6 +268,16 @@ export default function LogScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+      <AiInsightModal
+        visible={insightOpen}
+        loading={insightLoading}
+        error={insightError}
+        insight={insightText}
+        onClose={() => {
+          setInsightOpen(false);
+          router.back();
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }

@@ -21,6 +21,12 @@ export function getCategoryLabel(category: string): string {
   return labels[category] || 'Unknown';
 }
 
+export type CategoryPalette = Record<BPCategory, string>;
+
+export function getCategoryColor(category: BPCategory, colors: CategoryPalette): string {
+  return colors[category];
+}
+
 export function getAverages(readings: BPReading[]) {
   if (readings.length === 0) {
     return { avgSystolic: 0, avgDiastolic: 0, avgHeartRate: 0 };
