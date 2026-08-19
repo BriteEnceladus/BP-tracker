@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Local pre-screened insights
+
+- Local insight engine runs fully on-device after every new reading (no API key, no network).
+- Curated, non-diagnostic cards based on AHA category + recent trend + meds context.
+- Grok remains an optional upgrade that still uses the user’s own xAI key.
+- Insight modal distinguishes “Local insight” vs “Grok insight”.
+
 ## 1.1.1 — 2026-08-15
 
 - CSV import is live on History and Settings (same format as export).

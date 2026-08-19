@@ -7,30 +7,44 @@ interface AiInsightModalProps {
   loading: boolean;
   error?: string | null;
   insight?: string | null;
+  /** When true, copy reflects fully local / on-device insight */
+  isLocal?: boolean;
   onClose: () => void;
 }
 
-export function AiInsightModal({ visible, loading, error, insight, onClose }: AiInsightModalProps) {
+export function AiInsightModal({
+  visible,
+  loading,
+  error,
+  insight,
+  isLocal = true,
+  onClose,
+}: AiInsightModalProps) {
   const colors = useColors();
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Grok insight</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>
+            {isLocal ? 'Local insight' : 'Grok insight'}
+          </Text>
           <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
-            Optional, opt-in only. A small anonymized summary (numbers and categories, no notes or
-            dates) is sent to xAI with your own API key. This is not medical advice.
+            {isLocal
+              ? 'Generated on this device from your recent numbers and categories. No data leaves your phone. This is not medical advice.'
+              : 'Optional. A small anonymized summary (numbers and categories only) was sent to xAI with your own API key. This is not medical advice.'}
           </Text>
           {loading ? (
             <View style={styles.center}>
               <ActivityIndicator color={colors.primary} />
-              <Text style={{ color: colors.mutedForeground, marginTop: 12 }}>Asking Grok…</Text>
+              <Text style={{ color: colors.mutedForeground, marginTop: 12 }}>
+                {isLocal ? 'Preparing insight…' : 'Asking Grok…'}
+              </Text>
             </View>
           ) : error ? (
             <Text style={{ color: colors.crisis, lineHeight: 20 }}>{error}</Text>
           ) : (
-            <ScrollView style={{ maxHeight: 280 }}>
+            <ScrollView style={{ maxHeight: 320 }}>
               <Text style={[styles.body, { color: colors.foreground }]}>{insight}</Text>
             </ScrollView>
           )}
