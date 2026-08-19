@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Auto-backup & restore UX
+
+- Encrypted backup recommended every 7 days with soft Dashboard banner.
+- Prominent Backup & Restore section in Settings with last-backup date.
+- Clear "Restore from encrypted backup" CTAs on empty Dashboard and History (after reinstall).
+- Successful backup records timestamp so users know they are protected.
+
 ## 1.1.1 — 2026-08-15
 
 - CSV import is live on History and Settings (same format as export).
