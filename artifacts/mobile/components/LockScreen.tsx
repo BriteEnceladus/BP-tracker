@@ -19,6 +19,28 @@ import { getPasswordStrength } from '@/utils/crypto';
 
 type Mode = 'setup' | 'biometric' | 'password';
 
+/** Reject if the promise takes longer than `ms` milliseconds. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(
+        new Error(
+          `${label} timed out after ${ms / 1000}s. This usually means the native crypto module or SecureStore is unavailable (Expo Go cannot run this). Use a development build / EAS build.`
+        )
+      );
+    }, ms);
+    promise
+      .then((v) => {
+        clearTimeout(timer);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(timer);
+        reject(e);
+      });
+  });
+}
+
 export function LockScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -42,6 +64,7 @@ export function LockScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState(''); // live feedback while working
   const [bioError, setBioError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
@@ -86,7 +109,6 @@ export function LockScreen() {
   const strength = mode === 'setup' ? getPasswordStrength(password) : null;
   const passwordsMatch = confirm === password && confirm.length > 0;
 
-  // Live requirement checks (aligned with getPasswordStrength)
   const reqs = {
     length: password.length >= 12,
     mixedCase: /[A-Z]/.test(password) && /[a-z]/.test(password),
@@ -97,13 +119,11 @@ export function LockScreen() {
   const canSubmit = (() => {
     if (isLoading || !password) return false;
     if (mode === 'setup') {
-      // Require at least "Fair" (score >= 2) + matching confirm
       return (strength?.score ?? 0) >= 2 && passwordsMatch;
     }
     return true;
   })();
 
-  // Human-readable reason the button is disabled (setup only)
   const disabledReason = (() => {
     if (mode !== 'setup' || isLoading || canSubmit) return null;
     if (!password) return null;
@@ -118,6 +138,7 @@ export function LockScreen() {
 
     setIsLoading(true);
     setError('');
+    setStatus(mode === 'setup' ? 'Deriving encryption key…' : 'Unlocking…');
 
     try {
       if (mode === 'setup') {
@@ -125,11 +146,12 @@ export function LockScreen() {
           setError('Passwords do not match.');
           return;
         }
-        await setupPassword(password);
-        // On success, isUnlocked becomes true and this component unmounts.
-        // No further action needed here.
+        // Hard timeout so a hanging native module is never silent
+        await withTimeout(setupPassword(password), 12000, 'Password setup');
+        setStatus('Done');
+        // On success isUnlocked flips and this screen unmounts
       } else {
-        const ok = await unlock(password);
+        const ok = await withTimeout(unlock(password), 12000, 'Unlock');
         if (!ok) {
           setError('Incorrect password. Please try again.');
           setPassword('');
@@ -142,6 +164,7 @@ export function LockScreen() {
           : 'Something went wrong. Please try again.';
       console.error('[LockScreen] submit failed', err);
       setError(message);
+      setStatus('');
     } finally {
       setIsLoading(false);
     }
@@ -251,12 +274,10 @@ export function LockScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo */}
         <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
           <Feather name="shield" size={34} color={colors.primary} />
         </View>
 
-        {/* Title + educational copy */}
         <Text style={[styles.title, { color: colors.foreground }]}>
           {mode === 'setup' ? 'Create Your Password' : 'Welcome back'}
         </Text>
@@ -267,7 +288,6 @@ export function LockScreen() {
         </Text>
 
         <View style={styles.form}>
-          {/* Password field */}
           <View
             style={[
               styles.inputWrap,
@@ -303,7 +323,6 @@ export function LockScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Continuous strength bar + labels (setup only) */}
           {mode === 'setup' && password.length > 0 && strength && (
             <View style={styles.strengthSection}>
               <View style={styles.strengthHeader}>
@@ -333,7 +352,6 @@ export function LockScreen() {
             </View>
           )}
 
-          {/* Confirm field (setup only) */}
           {mode === 'setup' && (
             <>
               <View
@@ -384,7 +402,6 @@ export function LockScreen() {
             </>
           )}
 
-          {/* Live requirements checklist (setup only) */}
           {mode === 'setup' && (
             <View style={styles.checklist}>
               <ChecklistItem met={reqs.length} label="At least 12 characters" colors={colors} />
@@ -414,7 +431,6 @@ export function LockScreen() {
             </View>
           ) : null}
 
-          {/* Biometric teaser (setup only) */}
           {mode === 'setup' && (
             <View
               style={[styles.bioTeaser, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -449,7 +465,11 @@ export function LockScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Why is the button disabled? */}
+          {/* Live status while working */}
+          {isLoading && status ? (
+            <Text style={[styles.statusText, { color: colors.primary }]}>{status}</Text>
+          ) : null}
+
           {disabledReason ? (
             <Text style={[styles.disabledHint, { color: colors.mutedForeground }]}>
               {disabledReason}
@@ -475,6 +495,11 @@ export function LockScreen() {
             AES-256-GCM · PBKDF2 · 100,000 iterations
           </Text>
         </View>
+
+        {/* Platform hint for debugging */}
+        <Text style={[styles.platformHint, { color: colors.mutedForeground }]}>
+          {Platform.OS} · {Platform.OS === 'web' ? 'Web Crypto' : 'Native crypto'}
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -632,6 +657,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   submitText: { fontSize: 16, fontWeight: '600' },
+  statusText: {
+    marginTop: 12,
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   disabledHint: {
     marginTop: 10,
     fontSize: 13,
@@ -690,4 +721,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   encryptedText: { fontSize: 11, fontWeight: '500' },
+  platformHint: {
+    marginTop: 16,
+    fontSize: 11,
+    opacity: 0.6,
+  },
 });
