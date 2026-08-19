@@ -81,6 +81,15 @@ export function LockScreen() {
 
   const strength = mode === 'setup' ? getPasswordStrength(password) : null;
   const passwordsMatch = confirm === password;
+
+  // Live requirement checks (aligned with getPasswordStrength)
+  const reqs = {
+    length: password.length >= 12,
+    mixedCase: /[A-Z]/.test(password) && /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  };
+
   const canSubmit = (() => {
     if (isLoading || !password) return false;
     if (mode === 'setup') {
@@ -212,45 +221,43 @@ export function LockScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 32 },
+          { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 32 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
-          <Feather name="shield" size={36} color={colors.primary} />
+        {/* Logo */}
+        <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
+          <Feather name="shield" size={34} color={colors.primary} />
         </View>
 
-        <Text style={[styles.appName, { color: colors.primary }]}>BP Tracker</Text>
+        {/* Title + educational copy */}
         <Text style={[styles.title, { color: colors.foreground }]}>
-          {mode === 'setup' ? 'Secure your health data' : 'Welcome back'}
+          {mode === 'setup' ? 'Create Your Password' : 'Welcome back'}
         </Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           {mode === 'setup'
-            ? 'Create a strong master password to encrypt all your readings with AES-256-GCM + PBKDF2. Your data stays private — even if your device is lost. There is no password recovery.'
+            ? 'This password encrypts all your health data with AES-256 on this device. It never leaves your phone and cannot be recovered.'
             : 'Enter your master password to access your blood pressure readings.'}
         </Text>
 
-        {mode === 'setup' && (
-          <View style={[styles.tipBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="info" size={16} color={colors.primary} />
-            <Text style={[styles.tipText, { color: colors.mutedForeground }]}>
-              Use at least 12 characters with mixed case, numbers, and symbols. This password protects everything.
-            </Text>
-          </View>
-        )}
-
         <View style={styles.form}>
           {/* Password field */}
-          <Text style={[styles.label, { color: colors.mutedForeground }]}>
-            {mode === 'setup' ? 'Master Password' : 'Password'}
-          </Text>
-          <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.inputWrap,
+              {
+                backgroundColor: colors.card,
+                borderColor: password.length > 0 ? colors.primary : colors.border,
+              },
+            ]}
+          >
+            <Feather name="lock" size={18} color={colors.primary} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: colors.foreground }]}
               value={password}
               onChangeText={setPassword}
-              placeholder="Enter password"
+              placeholder={mode === 'setup' ? 'Password' : 'Enter password'}
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
@@ -268,41 +275,60 @@ export function LockScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Strength meter (setup only) */}
+          {/* Continuous strength bar + labels (setup only) */}
           {mode === 'setup' && password.length > 0 && strength && (
-            <View style={styles.strengthRow}>
-              <View style={styles.strengthBars}>
-                {[0, 1, 2, 3].map((i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.strengthBar,
-                      {
-                        backgroundColor:
-                          i < strength.score ? strength.color : colors.border,
-                      },
-                    ]}
-                  />
-                ))}
+            <View style={styles.strengthSection}>
+              <View style={styles.strengthHeader}>
+                <Text style={[styles.strengthTitle, { color: colors.mutedForeground }]}>
+                  Password Strength
+                </Text>
+                <Text style={[styles.strengthLabel, { color: strength.color }]}>
+                  {strength.label}
+                </Text>
               </View>
-              <Text style={[styles.strengthLabel, { color: strength.color }]}>
-                {strength.label}
-              </Text>
+              <View style={[styles.strengthTrack, { backgroundColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.strengthFill,
+                    {
+                      width: `${Math.min(100, (strength.score / 4) * 100)}%`,
+                      backgroundColor: strength.color,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.strengthLabels}>
+                <Text style={[styles.strengthHint, { color: colors.mutedForeground }]}>Weak</Text>
+                <Text style={[styles.strengthHint, { color: colors.mutedForeground }]}>Fair</Text>
+                <Text style={[styles.strengthHint, { color: colors.mutedForeground }]}>Strong</Text>
+              </View>
             </View>
           )}
 
           {/* Confirm field (setup only) */}
           {mode === 'setup' && (
             <>
-              <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 16 }]}>
-                Confirm Password
-              </Text>
-              <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.inputWrap,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor:
+                      confirm.length > 0
+                        ? passwordsMatch
+                          ? colors.primary
+                          : colors.crisis || '#EF4444'
+                        : colors.border,
+                    marginTop: 14,
+                  },
+                ]}
+              >
+                <Feather name="lock" size={18} color={colors.primary} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: colors.foreground }]}
                   value={confirm}
                   onChangeText={setConfirm}
-                  placeholder="Confirm password"
+                  placeholder="Confirm Password"
                   placeholderTextColor={colors.mutedForeground}
                   secureTextEntry={!showConfirm}
                   autoCapitalize="none"
@@ -327,19 +353,46 @@ export function LockScreen() {
             </>
           )}
 
+          {/* Live requirements checklist (setup only) */}
+          {mode === 'setup' && (
+            <View style={styles.checklist}>
+              <ChecklistItem met={reqs.length} label="At least 12 characters" colors={colors} />
+              <ChecklistItem met={reqs.mixedCase} label="Uppercase and lowercase letters" colors={colors} />
+              <ChecklistItem met={reqs.number} label="At least one number" colors={colors} />
+              <ChecklistItem met={reqs.special} label="At least one special character" colors={colors} />
+            </View>
+          )}
+
           {error ? (
-            <View style={[styles.errorWrap, { backgroundColor: (colors.crisis || '#EF4444') + '18', marginTop: 16 }]}>
+            <View
+              style={[
+                styles.errorWrap,
+                { backgroundColor: (colors.crisis || '#EF4444') + '18', marginTop: 16 },
+              ]}
+            >
               <Feather name="alert-circle" size={14} color={colors.crisis || '#EF4444'} />
               <Text style={[styles.errorText, { color: colors.crisis || '#EF4444' }]}>{error}</Text>
             </View>
           ) : null}
+
+          {/* Biometric teaser (setup only) */}
+          {mode === 'setup' && (
+            <View style={[styles.bioTeaser, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.bioTeaserIcon, { backgroundColor: colors.primary + '18' }]}>
+                <Feather name="lock" size={14} color={colors.primary} />
+              </View>
+              <Text style={[styles.bioTeaserText, { color: colors.mutedForeground }]}>
+                Next: You can enable Face ID / fingerprint for faster unlock.
+              </Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={[
               styles.submitBtn,
               {
                 backgroundColor: canSubmit ? colors.primary : colors.border,
-                opacity: canSubmit ? 1 : 0.6,
+                opacity: canSubmit ? 1 : 0.55,
               },
             ]}
             onPress={handleSubmit}
@@ -350,23 +403,25 @@ export function LockScreen() {
               <ActivityIndicator color={colors.primaryForeground || '#fff'} />
             ) : (
               <Text style={[styles.submitText, { color: colors.primaryForeground || '#fff' }]}>
-                {mode === 'setup' ? 'Create Password & Continue' : 'Unlock'}
+                {mode === 'setup' ? 'Continue' : 'Unlock'}
               </Text>
             )}
           </TouchableOpacity>
 
           {mode === 'password' && biometricSupported && (
-            <TouchableOpacity
-              style={styles.switchMode}
-              onPress={() => setMode('biometric')}
-            >
+            <TouchableOpacity style={styles.switchMode} onPress={() => setMode('biometric')}>
               <Feather name="smartphone" size={16} color={colors.primary} />
               <Text style={{ color: colors.primary, marginLeft: 8 }}>Use Biometrics</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={[styles.encryptedBadge, { backgroundColor: (colors.normal || '#22C55E') + '18', marginTop: 32 }]}>
+        <View
+          style={[
+            styles.encryptedBadge,
+            { backgroundColor: (colors.normal || '#22C55E') + '18', marginTop: 28 },
+          ]}
+        >
           <Feather name="shield" size={12} color={colors.normal || '#22C55E'} />
           <Text style={[styles.encryptedText, { color: colors.normal || '#22C55E' }]}>
             AES-256-GCM · PBKDF2 · 100,000 iterations
@@ -377,48 +432,142 @@ export function LockScreen() {
   );
 }
 
+function ChecklistItem({
+  met,
+  label,
+  colors,
+}: {
+  met: boolean;
+  label: string;
+  colors: ReturnType<typeof useColors>;
+}) {
+  return (
+    <View style={styles.checkRow}>
+      <View
+        style={[
+          styles.checkCircle,
+          {
+            backgroundColor: met ? colors.primary : 'transparent',
+            borderColor: met ? colors.primary : colors.border,
+          },
+        ]}
+      >
+        {met && <Feather name="check" size={12} color="#fff" />}
+      </View>
+      <Text
+        style={[
+          styles.checkLabel,
+          { color: met ? colors.foreground : colors.mutedForeground },
+        ]}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: 24, alignItems: 'center' },
-  biometricContent: { flex: 1, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
+  biometricContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconWrap: {
-    width: 72,
-    height: 72,
+    width: 68,
+    height: 68,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   appName: { fontSize: 15, fontWeight: '600', marginBottom: 6, letterSpacing: 0.3 },
-  title: { fontSize: 26, fontWeight: '700', textAlign: 'center', marginBottom: 10 },
-  subtitle: { fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 20, maxWidth: 340 },
-  tipBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 20,
-    width: '100%',
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 10,
   },
-  tipText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  form: { width: '100%', marginTop: 8 },
-  label: { fontSize: 13, fontWeight: '500', marginBottom: 8 },
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 21,
+    marginBottom: 28,
+    maxWidth: 320,
+  },
+  form: { width: '100%' },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
+    borderWidth: 1.5,
+    borderRadius: 14,
     paddingHorizontal: 14,
     height: 52,
   },
+  inputIcon: { marginRight: 10 },
   input: { flex: 1, fontSize: 16, paddingVertical: 0 },
-  strengthRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 10 },
-  strengthBars: { flexDirection: 'row', gap: 4, flex: 1 },
-  strengthBar: { flex: 1, height: 4, borderRadius: 2 },
-  strengthLabel: { fontSize: 12, fontWeight: '600' },
-  matchError: { fontSize: 12, marginTop: 6 },
+  strengthSection: { marginTop: 14, marginBottom: 4 },
+  strengthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  strengthTitle: { fontSize: 12, fontWeight: '500' },
+  strengthLabel: { fontSize: 12, fontWeight: '700' },
+  strengthTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  strengthFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  strengthLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  strengthHint: { fontSize: 11 },
+  matchError: { fontSize: 12, marginTop: 6, marginLeft: 4 },
+  checklist: {
+    marginTop: 18,
+    gap: 10,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkLabel: { fontSize: 14, flex: 1 },
+  bioTeaser: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 20,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  bioTeaserIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bioTeaserText: { flex: 1, fontSize: 13, lineHeight: 18 },
   errorWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -428,7 +577,7 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 13, flex: 1 },
   submitBtn: {
-    marginTop: 24,
+    marginTop: 22,
     height: 54,
     borderRadius: 14,
     alignItems: 'center',
@@ -460,7 +609,13 @@ const styles = StyleSheet.create({
   },
   bioLabel: { fontSize: 17, fontWeight: '600', marginBottom: 6 },
   bioSub: { fontSize: 14, textAlign: 'center', marginBottom: 8 },
-  bioWarning: { fontSize: 12, textAlign: 'center', marginTop: 4, maxWidth: 280, lineHeight: 17 },
+  bioWarning: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+    maxWidth: 280,
+    lineHeight: 17,
+  },
   usePasswordBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -479,7 +634,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    marginTop: 20,
   },
   encryptedText: { fontSize: 11, fontWeight: '500' },
 });
