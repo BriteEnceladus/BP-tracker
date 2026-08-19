@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BPProvider } from '../context/BPContext';
 import { MedsProvider } from '../context/MedsContext';
 import { AiSettingsProvider } from '../context/AiSettingsContext';
+import { PremiumProvider } from '../context/PremiumContext';
 import { CryptoProvider, useCrypto } from '../context/CryptoContext';
 import { LockScreen } from '../components/LockScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,17 +50,19 @@ function RootLayoutNav() {
   }
 
   return (
-    <AiSettingsProvider>
-      <BPProvider>
-        <MedsProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            {showOnboarding && <Stack.Screen name="onboarding" />}
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="reading/[id]" />
-          </Stack>
-        </MedsProvider>
-      </BPProvider>
-    </AiSettingsProvider>
+    <PremiumProvider>
+      <AiSettingsProvider>
+        <BPProvider>
+          <MedsProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              {showOnboarding && <Stack.Screen name="onboarding" />}
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="reading/[id]" />
+            </Stack>
+          </MedsProvider>
+        </BPProvider>
+      </AiSettingsProvider>
+    </PremiumProvider>
   );
 }
 
