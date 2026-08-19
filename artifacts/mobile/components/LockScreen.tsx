@@ -31,7 +31,11 @@ export function LockScreen() {
     unlockWithBiometric,
   } = useCrypto();
 
-  const initialMode: Mode = !isSetup ? 'setup' : biometricEnrolled && biometricSupported ? 'biometric' : 'password';
+  const initialMode: Mode = !isSetup
+    ? 'setup'
+    : biometricEnrolled && biometricSupported
+      ? 'biometric'
+      : 'password';
   const [mode, setMode] = useState<Mode>(initialMode);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -80,7 +84,7 @@ export function LockScreen() {
   };
 
   const strength = mode === 'setup' ? getPasswordStrength(password) : null;
-  const passwordsMatch = confirm === password;
+  const passwordsMatch = confirm === password && confirm.length > 0;
 
   // Live requirement checks (aligned with getPasswordStrength)
   const reqs = {
@@ -93,15 +97,28 @@ export function LockScreen() {
   const canSubmit = (() => {
     if (isLoading || !password) return false;
     if (mode === 'setup') {
-      return (strength?.score ?? 0) >= 2 && passwordsMatch && confirm.length > 0;
+      // Require at least "Fair" (score >= 2) + matching confirm
+      return (strength?.score ?? 0) >= 2 && passwordsMatch;
     }
     return true;
   })();
 
+  // Human-readable reason the button is disabled (setup only)
+  const disabledReason = (() => {
+    if (mode !== 'setup' || isLoading || canSubmit) return null;
+    if (!password) return null;
+    if ((strength?.score ?? 0) < 2) return 'Password is still too weak — meet more requirements above.';
+    if (!confirm) return 'Confirm your password to continue.';
+    if (!passwordsMatch) return 'Passwords do not match.';
+    return null;
+  })();
+
   const handleSubmit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || isLoading) return;
+
     setIsLoading(true);
     setError('');
+
     try {
       if (mode === 'setup') {
         if (!passwordsMatch) {
@@ -109,6 +126,8 @@ export function LockScreen() {
           return;
         }
         await setupPassword(password);
+        // On success, isUnlocked becomes true and this component unmounts.
+        // No further action needed here.
       } else {
         const ok = await unlock(password);
         if (!ok) {
@@ -116,8 +135,13 @@ export function LockScreen() {
           setPassword('');
         }
       }
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Something went wrong. Please try again.';
+      console.error('[LockScreen] submit failed', err);
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -177,7 +201,8 @@ export function LockScreen() {
           </Text>
 
           <Text style={[styles.bioWarning, { color: colors.mutedForeground }]}>
-            Biometrics are a convenience feature only. Your master password is still required for full security.
+            Biometrics are a convenience feature only. Your master password is still required for full
+            security.
           </Text>
 
           {bioError ? (
@@ -256,7 +281,10 @@ export function LockScreen() {
             <TextInput
               style={[styles.input, { color: colors.foreground }]}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => {
+                setPassword(t);
+                setError('');
+              }}
               placeholder={mode === 'setup' ? 'Password' : 'Enter password'}
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry={!showPassword}
@@ -327,7 +355,10 @@ export function LockScreen() {
                 <TextInput
                   style={[styles.input, { color: colors.foreground }]}
                   value={confirm}
-                  onChangeText={setConfirm}
+                  onChangeText={(t) => {
+                    setConfirm(t);
+                    setError('');
+                  }}
                   placeholder="Confirm Password"
                   placeholderTextColor={colors.mutedForeground}
                   secureTextEntry={!showConfirm}
@@ -357,9 +388,17 @@ export function LockScreen() {
           {mode === 'setup' && (
             <View style={styles.checklist}>
               <ChecklistItem met={reqs.length} label="At least 12 characters" colors={colors} />
-              <ChecklistItem met={reqs.mixedCase} label="Uppercase and lowercase letters" colors={colors} />
+              <ChecklistItem
+                met={reqs.mixedCase}
+                label="Uppercase and lowercase letters"
+                colors={colors}
+              />
               <ChecklistItem met={reqs.number} label="At least one number" colors={colors} />
-              <ChecklistItem met={reqs.special} label="At least one special character" colors={colors} />
+              <ChecklistItem
+                met={reqs.special}
+                label="At least one special character"
+                colors={colors}
+              />
             </View>
           )}
 
@@ -377,7 +416,9 @@ export function LockScreen() {
 
           {/* Biometric teaser (setup only) */}
           {mode === 'setup' && (
-            <View style={[styles.bioTeaser, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View
+              style={[styles.bioTeaser, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
               <View style={[styles.bioTeaserIcon, { backgroundColor: colors.primary + '18' }]}>
                 <Feather name="lock" size={14} color={colors.primary} />
               </View>
@@ -407,6 +448,13 @@ export function LockScreen() {
               </Text>
             )}
           </TouchableOpacity>
+
+          {/* Why is the button disabled? */}
+          {disabledReason ? (
+            <Text style={[styles.disabledHint, { color: colors.mutedForeground }]}>
+              {disabledReason}
+            </Text>
+          ) : null}
 
           {mode === 'password' && biometricSupported && (
             <TouchableOpacity style={styles.switchMode} onPress={() => setMode('biometric')}>
@@ -584,6 +632,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   submitText: { fontSize: 16, fontWeight: '600' },
+  disabledHint: {
+    marginTop: 10,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   switchMode: {
     flexDirection: 'row',
     alignItems: 'center',
