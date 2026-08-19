@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Premium gates (UI mock)
+
+- Freemium matrix locked: free = last 30 days history + basic tracking; Pro = full history, AI insights, import, encrypted backup/restore, PDF report, reminders.
+- `PremiumContext` + mock toggle in Settings (dev only). Real subscription IAP to follow.
+- Soft locks on History ranges (90d / All), CSV import, AI insights, reminders, backup, restore, and PDF.
+
 ## 1.1.1 — 2026-08-15
 
 - CSV import is live on History and Settings (same format as export).
