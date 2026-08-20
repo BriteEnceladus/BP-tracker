@@ -11,8 +11,8 @@
 
 import QuickCrypto from 'react-native-quick-crypto';
 
-// Polyfill random values if not present (quick-crypto helps here)
-import 'react-native-get-random-values'; // fallback safety for crypto.getRandomValues
+// Polyfill random values if not present
+import 'react-native-get-random-values';
 
 // Make sure global crypto is available
 if (typeof global.crypto === 'undefined') {
@@ -31,6 +31,32 @@ export interface PasswordStrength {
   label: string;
   color: string;
   feedback: string;
+}
+
+/**
+ * Hard check that the native crypto surface is actually usable.
+ * Throws a clear, actionable error instead of the cryptic
+ * "undefined is not a function" that occurs in Expo Go or
+ * when the development build was not rebuilt after adding
+ * react-native-quick-crypto.
+ */
+function ensureNativeCrypto(): void {
+  const c = (global as any).crypto;
+  if (
+    !c ||
+    typeof c.getRandomValues !== 'function' ||
+    !c.subtle ||
+    typeof c.subtle.importKey !== 'function' ||
+    typeof c.subtle.deriveKey !== 'function' ||
+    typeof c.subtle.encrypt !== 'function'
+  ) {
+    throw new Error(
+      'Native crypto module is unavailable. ' +
+        'BP Tracker requires a development build or EAS build. ' +
+        'Expo Go does not support react-native-quick-crypto. ' +
+        'Run: npx expo run:android  (or use the Build-Apk.ps1 script)'
+    );
+  }
 }
 
 // ---------- Base64 helpers (binary safe) ----------
@@ -64,11 +90,13 @@ function base64ToBuffer(base64: string): ArrayBuffer {
 }
 
 export function generateSalt(): string {
+  ensureNativeCrypto();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   return bufferToBase64(salt.buffer as ArrayBuffer);
 }
 
 export async function deriveKey(password: string, saltBase64: string): Promise<CryptoKey> {
+  ensureNativeCrypto();
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
@@ -93,6 +121,7 @@ export async function deriveKey(password: string, saltBase64: string): Promise<C
 }
 
 export async function encryptData(key: CryptoKey, plaintext: string): Promise<EncryptedData> {
+  ensureNativeCrypto();
   const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
   const enc = new TextEncoder();
   const ciphertext = await crypto.subtle.encrypt(
@@ -107,6 +136,7 @@ export async function encryptData(key: CryptoKey, plaintext: string): Promise<En
 }
 
 export async function decryptData(key: CryptoKey, data: EncryptedData): Promise<string> {
+  ensureNativeCrypto();
   const plaintext = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: base64ToBuffer(data.iv) },
     key,
