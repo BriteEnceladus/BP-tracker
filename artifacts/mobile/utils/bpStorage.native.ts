@@ -30,7 +30,7 @@ export async function isEncryptionSetup(): Promise<boolean> {
 }
 
 export async function setupEncryption(password: string): Promise<CryptoKey> {
-  const salt = await generateSalt();
+  const salt = generateSalt(); // sync
   const key = await deriveKey(password, salt);
   const verifier = await createVerifier(key);
 
@@ -59,7 +59,7 @@ export async function changeEncryptionPassword(
   oldKey: CryptoKey,
   newPassword: string
 ): Promise<CryptoKey> {
-  const newSalt = await generateSalt();
+  const newSalt = generateSalt();
   const newKey = await deriveKey(newPassword, newSalt);
   const newVerifier = await createVerifier(newKey);
 
