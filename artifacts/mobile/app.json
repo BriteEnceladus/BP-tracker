@@ -49,6 +49,22 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
+      "./plugins/withCmakeObjectPath.js",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "packagingOptions": {
+              "pickFirst": [
+                "**/libcrypto.so",
+                "**/libssl.so"
+              ]
+            }
+          }
+        }
+      ],
       "expo-font",
       "expo-web-browser",
       [

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Local Android development build via `npx expo run:android` (`expo-dev-client`). Expo Go cannot run native AES-256-GCM.
+- EAS `development` profile now produces an installable APK. Windows local builds should use a short path (`C:\bp`) and LongPathsEnabled.
+
 ## 1.1.1 — 2026-08-15
 
 - CSV import is live on History and Settings (same format as export).

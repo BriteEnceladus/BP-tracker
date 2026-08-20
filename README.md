@@ -15,23 +15,84 @@ A secure, standalone blood pressure and heart rate tracking app built with Expo.
 
 ## Build Instructions
 
+Native AES-256-GCM (`react-native-quick-crypto`) does **not** work in Expo Go. Use a development build.
+
 ### Prerequisites
 - Node.js 20+
 - pnpm
-- EAS CLI (`npm install -g eas-cli`)
+- JDK 17
+- Android Studio / Android SDK (for a local Android build)
+- EAS CLI (`npm install -g eas-cli`) — only for cloud builds
 
-### Run locally
-```bash
-git clone https://github.com/BriteEnceladus/BP-tracker.git
-cd BP-tracker
+### Development build (Android)
+
+This compiles a custom native app with crypto linked, installs it, and starts Metro.
+
+```powershell
+cd artifacts/mobile
 pnpm install
-pnpm --filter @workspace/mobile run dev
+npx expo run:android
+```
+
+Physical device (USB debugging on):
+
+```powershell
+npx expo run:android --device
+```
+
+After the native app is installed, later JS-only work is just:
+
+```powershell
+npx expo start --dev-client
+```
+
+Rebuild native code after adding a native library, changing `app.json`, or upgrading the Expo SDK:
+
+```powershell
+npx expo prebuild --platform android --clean
+npx expo run:android
+```
+
+Helper scripts:
+
+```powershell
+# Checks JDK + Android SDK, then runs expo run:android
+.\scripts\Run-Android-Dev.ps1
+
+# Optional: install command-line Android SDK packages (no Android Studio UI)
+.\scripts\Setup-Android-Sdk.ps1
+```
+
+**Windows notes**
+
+- Do not build from a OneDrive folder. Copy the project to a short path such as `C:\bp` first (`node_modules` + CMake codegen exceed the 260-character path limit).
+- Enable long paths (Administrator PowerShell), then reboot:
+
+```powershell
+Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name LongPathsEnabled -Value 1
+```
+
+- Plug in a phone with USB debugging, or enable the Android Emulator hypervisor driver (AEHD). This machine has no hypervisor, so the emulator will not boot.
+- Cloud alternative (no local NDK): `eas build --platform android --profile development`
+
+### Run Metro only (web / already-installed client)
+```powershell
+cd artifacts/mobile
+pnpm install
+pnpm dev
 ```
 
 ### Build APK for Android (Preview)
 ```bash
 cd artifacts/mobile
 eas build --platform android --profile preview
+```
+
+Cloud development-client APK (no local Android SDK):
+
+```bash
+cd artifacts/mobile
+eas build --platform android --profile development
 ```
 
 Download the generated `.apk` and install on your Android device.
