@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -37,7 +37,7 @@ export default function HistoryScreen() {
   const { readings, isLoading, deleteReading, addReading } = useBP();
   const [range, setRange] = useState<Range>(30);
   const [recentlyDeleted, setRecentlyDeleted] = useState<BPReading | null>(null);
-  const [undoTimeout, setUndoTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredReadings = useMemo(() => getReadingsForDays(readings, range), [readings, range]);
 
@@ -121,21 +121,21 @@ export default function HistoryScreen() {
     });
 
     setRecentlyDeleted(readingToDelete);
-    if (undoTimeout) clearTimeout(undoTimeout);
 
-    const timeout = setTimeout(() => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+
+    undoTimerRef.current = setTimeout(() => {
       setRecentlyDeleted(null);
+      undoTimerRef.current = null;
     }, 15000);
-
-    setUndoTimeout(timeout);
   };
 
   const handleUndo = async () => {
     if (!recentlyDeleted) return;
 
-    if (undoTimeout) {
-      clearTimeout(undoTimeout);
-      setUndoTimeout(null);
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
     }
 
     try {
@@ -153,11 +153,11 @@ export default function HistoryScreen() {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
-      if (undoTimeout) clearTimeout(undoTimeout);
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     };
-  }, [undoTimeout]);
+  }, []);
 
   const renderRightActions = (item: any) => (
     <TouchableOpacity

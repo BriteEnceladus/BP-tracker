@@ -45,12 +45,26 @@ async function load(key: SessionCryptoKey): Promise<Medication[]> {
     if (!raw) {
       const legacy = await AsyncStorage.getItem('bp_medications_v1');
       if (legacy) {
-        const parsed: Medication[] = JSON.parse(legacy);
+        let parsed: Medication[];
+        try {
+          parsed = JSON.parse(legacy);
+        } catch {
+          memoryCache = [];
+          return memoryCache;
+        }
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          memoryCache = [];
+          return memoryCache;
+        }
         memoryCache = parsed;
         const maxId = parsed.reduce((m, r) => Math.max(m, r.id ?? 0), 0);
         nextId = maxId + 1;
-        await persist(parsed, key);
-        await AsyncStorage.removeItem('bp_medications_v1');
+        try {
+          await persist(parsed, key);
+          await AsyncStorage.removeItem('bp_medications_v1');
+        } catch (e) {
+          console.warn('[medsStore.web] legacy migration persist failed, keeping legacy', e);
+        }
         return memoryCache;
       }
       memoryCache = [];

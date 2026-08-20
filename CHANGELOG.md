@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Safer legacy medication migration: keep plaintext meds if encrypted persist fails; skip corrupt JSON.
+- History undo timeout is stored in a ref so timers clear on unmount without extra renders.
 - Local Android development build via `npx expo run:android` (`expo-dev-client`). Expo Go cannot run native AES-256-GCM.
 - EAS `development` profile now produces an installable APK. Windows local builds should use a short path (`C:\bp`) and LongPathsEnabled.
 
