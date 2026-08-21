@@ -13,11 +13,13 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useBP } from "@/context/BPContext";
+import { useMeds } from "@/context/MedsContext";
 import { usePremium } from "@/context/PremiumContext";
 import { BPCard } from "@/components/BPCard";
 import { BPChart } from "@/components/BPChart";
 import { StatCard } from "@/components/StatCard";
 import { TimeOfDayCard } from "@/components/TimeOfDayCard";
+import { MedsVsBpCard } from "@/components/MedsVsBpCard";
 import {
   getReadingsForDays,
   getAverages,
@@ -25,12 +27,14 @@ import {
   getCategoryColor,
 } from "@/utils/bpUtils";
 import { summarizeTimeOfDay } from "@/utils/timeOfDay";
+import { summarizeMedsVsBp } from "@/utils/medAdherence";
 import { setDailyReminderEnabled } from "@/utils/reminders";
 
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { readings, isLoading } = useBP();
+  const { medications } = useMeds();
   const { isPremium, requirePro } = usePremium();
 
   const sortedReadings = useMemo(() => {
@@ -51,6 +55,8 @@ export default function DashboardScreen() {
     () => summarizeTimeOfDay(timeOfDayWindow),
     [timeOfDayWindow]
   );
+  const medsVsBp = useMemo(() => summarizeMedsVsBp(timeOfDayWindow), [timeOfDayWindow]);
+  const activeMedCount = medications.filter((m) => m.active).length;
   const avgCategoryColor = useMemo(() => {
     if (!averages.avgSystolic || !averages.avgDiastolic) return undefined;
     return getCategoryColor(getBPCategory(averages.avgSystolic, averages.avgDiastolic), colors);
@@ -177,6 +183,20 @@ export default function DashboardScreen() {
               Averages use your local clock
               {isPremium ? '' : ' (last 30 days)'}. Nothing is sent to a server.
             </Text>
+          </View>
+        )}
+
+        {(activeMedCount > 0 || medsVsBp.taken.count > 0) && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Meds vs BP
+            </Text>
+            <MedsVsBpCard
+              summary={medsVsBp}
+              isPremium={isPremium}
+              activeMedCount={activeMedCount}
+              onPressPro={() => requirePro('medsCorrelation')}
+            />
           </View>
         )}
 

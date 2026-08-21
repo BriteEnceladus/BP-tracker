@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,11 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../../hooks/useColors';
 import { useMeds } from '../../context/MedsContext';
+import { useBP } from '../../context/BPContext';
+import { usePremium } from '../../context/PremiumContext';
+import { MedsVsBpCard } from '../../components/MedsVsBpCard';
+import { summarizeMedsVsBp } from '../../utils/medAdherence';
+import { getReadingsForDays } from '../../utils/bpUtils';
 import { Medication, MedicationInput, parseWithSchema, MedicationInputSchema } from '../../src/schemas';
 
 export default function MedicationsScreen() {
@@ -23,6 +28,12 @@ export default function MedicationsScreen() {
   const insets = useSafeAreaInsets();
   const { medications, isLoading, addMedication, updateMedication, deleteMedication, toggleActive } =
     useMeds();
+  const { readings } = useBP();
+  const { isPremium, requirePro } = usePremium();
+  const medsVsBp = useMemo(() => {
+    const windowed = getReadingsForDays(readings, isPremium ? 0 : 30);
+    return summarizeMedsVsBp(windowed);
+  }, [readings, isPremium]);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Medication | null>(null);
@@ -130,6 +141,16 @@ export default function MedicationsScreen() {
       </Text>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {readings.length > 0 ? (
+          <View style={{ marginBottom: 16 }}>
+            <MedsVsBpCard
+              summary={medsVsBp}
+              isPremium={isPremium}
+              activeMedCount={activeMeds.length}
+              onPressPro={() => requirePro('medsCorrelation')}
+            />
+          </View>
+        ) : null}
         {isLoading ? (
           <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 40 }}>
             Loading…
