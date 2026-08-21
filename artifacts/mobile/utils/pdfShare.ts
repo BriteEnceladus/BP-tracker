@@ -1,9 +1,12 @@
 import { Platform } from 'react-native';
-import { buildPdfHtml } from './pdfReport';
+import { buildPdfHtml, type PdfReportOptions } from './pdfReport';
 import { BPReading } from '../src/schemas';
 
-export async function sharePdfReport(readings: BPReading[]): Promise<void> {
-  const html = buildPdfHtml(readings);
+export async function sharePdfReport(
+  readings: BPReading[],
+  options: PdfReportOptions = {}
+): Promise<void> {
+  const html = buildPdfHtml(readings, options);
 
   if (Platform.OS === 'web') {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });

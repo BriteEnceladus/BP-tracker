@@ -5,6 +5,7 @@
 - Measurement protocol helper on Log (Free): sit, feet flat, rest ~5 min, cuff at heart. Dismiss for the session or “don’t show again” (AsyncStorage preference only). Re-enable in Settings → Logging.
 - Time-of-day averages on Dashboard (Free, last 30 days, local clock). Pro adds per-bucket counts and the peak window. Fully on-device.
 - Meds vs BP: local averages for readings marked taken vs not (need ≥3 in each group). Basic text is Free; two-bar systolic chart is Pro.
+- Year-in-review clinician PDF (Pro): monthly averages, category counts, active meds, 30-day appendix. Optional streak/target if provided. Notes omitted. Not a medical device.
 
 ## 1.1.1 — 2026-08-15
 

@@ -51,7 +51,7 @@ export default function SettingsScreen() {
     cryptoKey,
   } = useCrypto();
   const { insightsEnabled, hasApiKey, setInsightsEnabled, saveApiKey, clearApiKey } = useAiSettings();
-  const { isPremium, setMockPremium, restorePurchases } = usePremium();
+  const { isPremium, setMockPremium, restorePurchases, requirePro } = usePremium();
   const [apiKeyDraft, setApiKeyDraft] = useState('');
   const [protocolHidden, setProtocolHiddenState] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
@@ -155,12 +155,16 @@ export default function SettingsScreen() {
   };
 
   const exportPdf = async () => {
+    if (!isPremium) {
+      requirePro('pdfReport');
+      return;
+    }
     if (readings.length === 0) {
       Alert.alert('No Data', 'There are no readings to include in a report.');
       return;
     }
     try {
-      await sharePdfReport(readings);
+      await sharePdfReport(readings, { medications });
     } catch {
       Alert.alert('Report failed', 'Unable to create the PDF report.');
     }
