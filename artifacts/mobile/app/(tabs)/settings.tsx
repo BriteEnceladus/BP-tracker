@@ -16,6 +16,7 @@ import { useBP } from '../../context/BPContext';
 import { useMeds } from '../../context/MedsContext';
 import { useCrypto } from '../../context/CryptoContext';
 import { useAiSettings } from '../../context/AiSettingsContext';
+import { usePremium } from '../../context/PremiumContext';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { readingsToCsv } from '../../utils/csvExport';
@@ -50,6 +51,7 @@ export default function SettingsScreen() {
     cryptoKey,
   } = useCrypto();
   const { insightsEnabled, hasApiKey, setInsightsEnabled, saveApiKey, clearApiKey } = useAiSettings();
+  const { isPremium, setMockPremium, restorePurchases } = usePremium();
   const [apiKeyDraft, setApiKeyDraft] = useState('');
   const [protocolHidden, setProtocolHiddenState] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
@@ -428,6 +430,35 @@ export default function SettingsScreen() {
         </View>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
           Local notifications only. Medication alerts fire at 8:00 and 20:00.
+        </Text>
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>BP Tracker Pro</Text>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground }}>Status</Text>
+          <Text style={{ color: isPremium ? colors.normal : colors.mutedForeground, fontWeight: '600' }}>
+            {isPremium ? 'Pro (preview)' : 'Free'}
+          </Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground, flex: 1, paddingRight: 12 }}>
+            Mock Pro (developer)
+          </Text>
+          <Switch
+            value={isPremium}
+            onValueChange={(value) => {
+              setMockPremium(value).catch(() => {});
+            }}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
+        </View>
+        <TouchableOpacity style={styles.row} onPress={() => restorePurchases()}>
+          <Text style={{ color: colors.foreground }}>Restore purchases</Text>
+          <Feather name="refresh-cw" size={18} color={colors.mutedForeground} />
+        </TouchableOpacity>
+        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+          Entitlement is a local flag, not health data. Checkout is not connected yet.
         </Text>
       </View>
 

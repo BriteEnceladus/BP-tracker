@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Measurement protocol helper on Log (Free): sit, feet flat, rest ~5 min, cuff at heart. Dismiss for the session or “don’t show again” (AsyncStorage preference only). Re-enable in Settings → Logging.
+- Time-of-day averages on Dashboard (Free, last 30 days, local clock). Pro adds per-bucket counts and the peak window. Fully on-device.
 
 ## 1.1.1 — 2026-08-15
 

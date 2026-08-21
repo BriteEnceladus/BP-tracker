@@ -22,6 +22,7 @@ export const PRO_FEATURES = {
   encryptedRestore: 'Restore encrypted backup',
   pdfReport: 'PDF clinician report',
   reminders: 'Reminders',
+  timeOfDayRich: 'Richer time-of-day patterns',
   /** Optional future: backend-powered Grok without user API key */
   backendInsights: 'Pro insights',
 } as const;

@@ -13,21 +13,25 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useBP } from "@/context/BPContext";
+import { usePremium } from "@/context/PremiumContext";
 import { BPCard } from "@/components/BPCard";
 import { BPChart } from "@/components/BPChart";
 import { StatCard } from "@/components/StatCard";
+import { TimeOfDayCard } from "@/components/TimeOfDayCard";
 import {
   getReadingsForDays,
   getAverages,
   getBPCategory,
   getCategoryColor,
 } from "@/utils/bpUtils";
+import { summarizeTimeOfDay } from "@/utils/timeOfDay";
 import { setDailyReminderEnabled } from "@/utils/reminders";
 
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { readings, isLoading } = useBP();
+  const { isPremium, requirePro } = usePremium();
 
   const sortedReadings = useMemo(() => {
     return [...readings].sort(
@@ -39,6 +43,14 @@ export default function DashboardScreen() {
 
   const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
   const averages = useMemo(() => getAverages(last7Days), [last7Days]);
+  const timeOfDayWindow = useMemo(
+    () => getReadingsForDays(readings, isPremium ? 0 : 30),
+    [readings, isPremium]
+  );
+  const timeOfDay = useMemo(
+    () => summarizeTimeOfDay(timeOfDayWindow),
+    [timeOfDayWindow]
+  );
   const avgCategoryColor = useMemo(() => {
     if (!averages.avgSystolic || !averages.avgDiastolic) return undefined;
     return getCategoryColor(getBPCategory(averages.avgSystolic, averages.avgDiastolic), colors);
@@ -151,6 +163,23 @@ export default function DashboardScreen() {
         </View>
 
         {/* Stats - Bold data row */}
+        {timeOfDayWindow.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Time of day
+            </Text>
+            <TimeOfDayCard
+              summaries={timeOfDay}
+              isPremium={isPremium}
+              onPressPro={() => requirePro('timeOfDayRich')}
+            />
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }}>
+              Averages use your local clock
+              {isPremium ? '' : ' (last 30 days)'}. Nothing is sent to a server.
+            </Text>
+          </View>
+        )}
+
         {last7Days.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Last 7 Days</Text>
