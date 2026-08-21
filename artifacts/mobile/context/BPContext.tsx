@@ -13,6 +13,8 @@ import { useCrypto } from './CryptoContext';
 import { type SessionCryptoKey } from '../utils/readingEncryption';
 import { BPReadingInput } from '../src/schemas';
 import { runMigrationIfNeeded } from '../src/migration';
+import { buildWidgetSnapshot } from '../utils/widgetSnapshot';
+import { getWidgetEnabled, lockHomeWidget, publishWidgetSnapshot } from '../widget/bridge';
 
 interface BPContextType {
   readings: BPReading[];
@@ -86,6 +88,25 @@ export function BPProvider({ children }: { children: ReactNode }) {
 
     refresh();
   }, [refresh, isUnlocked, cryptoKey]);
+
+  useEffect(() => {
+    if (!isUnlocked) {
+      void lockHomeWidget();
+      return;
+    }
+    if (isLoading) return;
+    let cancelled = false;
+    (async () => {
+      const enabled = await getWidgetEnabled();
+      if (cancelled) return;
+      await publishWidgetSnapshot(
+        buildWidgetSnapshot({ enabled, locked: false, readings })
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isUnlocked, isLoading, readings]);
 
   const addReading = async (readingData: BPReadingInput) => {
     try {

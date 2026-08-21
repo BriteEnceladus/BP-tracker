@@ -72,6 +72,25 @@
         {
           "faceIDPermission": "Allow BP Tracker to use Face ID for convenient unlock. Your master password is still required for full security."
         }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "LatestReading",
+              "label": "BP Tracker",
+              "description": "Latest blood pressure. Numbers only if you opt in; clears when the app locks.",
+              "minWidth": "180dp",
+              "minHeight": "80dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widget-preview/latest-reading.png",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
     ],
     "experiments": {

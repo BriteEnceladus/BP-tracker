@@ -12,6 +12,7 @@ import {
   removeBiometric as removeBiometricStorage,
 } from "@/utils/bpStorage";
 import type { SessionCryptoKey } from "@/utils/crypto";
+import { lockHomeWidget } from "@/widget/bridge";
 
 export interface CryptoContextType {
   isSetup: boolean;
@@ -107,6 +108,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
     setCryptoKey(null);
     passwordRef.current = "";
     setIsUnlocked(false);
+    void lockHomeWidget();
   }, []);
 
   const changePassword = useCallback(

@@ -12,6 +12,7 @@ A secure, standalone blood pressure and heart rate tracking app built with Expo.
 - Local measurement and medication reminders
 - Full CRUD: add, edit, delete readings and medications
 - Dark mode, PWA + Standalone APK support
+- Optional Android Home Screen widget (Pro): latest SYS/DIA + tap to log. Requires a native build.
 
 ## Build Instructions
 
@@ -42,6 +43,19 @@ eas build --platform android --profile production
 # or for iOS (requires Apple Developer account)
 eas build --platform ios --profile production
 ```
+
+### Home Screen widget (Android)
+
+The widget is **not available in Expo Go**. Native AES-256-GCM and `react-native-android-widget` both need a development client or EAS APK:
+
+```bash
+cd artifacts/mobile
+pnpm install
+npx expo prebuild --platform android
+npx expo run:android
+```
+
+Or `eas build --platform android --profile preview`. Then Settings → Home Screen (Pro) → Show latest reading on widget. Tap the widget to open Log (`bptracker://log`). Numbers clear when the app locks. Notes never leave the vault.
 
 **Note on Assets:** For production builds and splash screens, add your icon (1024x1024 png) and splash images to `artifacts/mobile/assets/images/`. The app.json references these paths.
 

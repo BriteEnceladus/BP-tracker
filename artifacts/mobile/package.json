@@ -2,7 +2,7 @@
   "name": "@workspace/mobile",
   "version": "0.0.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "scripts": {
     "dev": "pnpm exec expo start --localhost",
     "android": "expo run:android",
@@ -70,6 +70,7 @@
     "expo-notifications": "~0.32.17",
     "expo-print": "~15.0.8",
     "expo-sharing": "~14.0.8",
+    "react-native-android-widget": "^0.20.3",
     "react-native-get-random-values": "~1.11.0",
     "react-native-quick-crypto": "^0.7.1"
   }

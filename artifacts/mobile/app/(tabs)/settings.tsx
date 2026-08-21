@@ -28,6 +28,14 @@ import { createEncryptedBackup, decryptBackup, isEncryptedBackupFile } from '../
 import { pickBackupFile, shareBackupFile } from '../../utils/backupShare';
 import { sharePdfReport } from '../../utils/pdfShare';
 import { isProtocolHidden, setProtocolHidden } from '../../utils/protocolHelper';
+import { buildWidgetSnapshot } from '../../utils/widgetSnapshot';
+import {
+  disableHomeWidget,
+  getWidgetEnabled,
+  pinHomeWidget,
+  publishWidgetSnapshot,
+  setWidgetEnabled,
+} from '../../widget/bridge';
 import * as readingsStore from '../../src/readingsStore';
 import * as medsStore from '../../src/medsStore';
 import type { SessionCryptoKey } from '../../utils/crypto';
@@ -54,6 +62,7 @@ export default function SettingsScreen() {
   const { isPremium, setMockPremium, restorePurchases, requirePro } = usePremium();
   const [apiKeyDraft, setApiKeyDraft] = useState('');
   const [protocolHidden, setProtocolHiddenState] = useState(false);
+  const [widgetEnabled, setWidgetEnabledState] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminders, setReminders] = useState<ReminderSettings>({
     measurementEnabled: false,
@@ -65,7 +74,45 @@ export default function SettingsScreen() {
   useEffect(() => {
     getReminderSettings().then(setReminders).catch(() => {});
     isProtocolHidden().then(setProtocolHiddenState).catch(() => {});
+    getWidgetEnabled().then(setWidgetEnabledState).catch(() => setWidgetEnabledState(false));
   }, []);
+
+  const toggleHomeWidget = (value: boolean) => {
+    if (value && !isPremium) {
+      requirePro('homeWidget');
+      return;
+    }
+    if (Platform.OS !== 'android') {
+      Alert.alert(
+        'Android only',
+        'Home Screen widgets are available in the Android development or EAS build. Expo Go cannot run the widget. iOS widgets are not in this build.'
+      );
+      return;
+    }
+    if (!value) {
+      void disableHomeWidget();
+      setWidgetEnabledState(false);
+      return;
+    }
+    Alert.alert(
+      'Show latest reading on Home Screen?',
+      'This sits on your Home Screen unencrypted so the launcher can display it. Notes, names, and your password never leave the vault. The widget clears when the app locks.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Show numbers',
+          onPress: async () => {
+            await setWidgetEnabled(true);
+            setWidgetEnabledState(true);
+            await publishWidgetSnapshot(
+              buildWidgetSnapshot({ enabled: true, locked: false, readings })
+            );
+            await pinHomeWidget();
+          },
+        },
+      ]
+    );
+  };
 
   const persistProtocolVisible = async (show: boolean) => {
     await setProtocolHidden(!show);
@@ -332,6 +379,25 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.foreground }}>Privacy Policy</Text>
           <Feather name="external-link" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Home Screen</Text>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground, flex: 1, paddingRight: 12 }}>
+            Show latest reading on widget
+          </Text>
+          <Switch
+            value={isPremium && widgetEnabled}
+            onValueChange={toggleHomeWidget}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
+        </View>
+        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+          Pro, Android, opt-in. Requires a development client or EAS APK — not Expo Go. Latest SYS/DIA
+          can sit on the launcher unencrypted; notes never leave the vault. Locking the app clears the
+          numbers.
+        </Text>
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>

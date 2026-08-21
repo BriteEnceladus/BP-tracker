@@ -24,6 +24,7 @@ export const PRO_FEATURES = {
   reminders: 'Reminders',
   timeOfDayRich: 'Richer time-of-day patterns',
   medsCorrelation: 'Meds vs BP charts',
+  homeWidget: 'Home Screen widget',
   /** Optional future: backend-powered Grok without user API key */
   backendInsights: 'Pro insights',
 } as const;

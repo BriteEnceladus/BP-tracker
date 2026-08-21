@@ -30,6 +30,7 @@ import {
   updateBiometricPassword,
   removeBiometric as removeBiometricStorage,
 } from '@/utils/bpStorage';
+import { lockHomeWidget } from '@/widget/bridge';
 
 export interface CryptoContextType {
   isSetup: boolean;
@@ -83,7 +84,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
     passwordRef.current = '';
     setCryptoKey(null);
     setIsUnlocked(false);
-    // Best-effort: encourage GC of previous key object
+    void lockHomeWidget();
   }, []);
 
   useEffect(() => {
