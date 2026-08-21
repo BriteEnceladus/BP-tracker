@@ -19,6 +19,7 @@ import { useAiSettings } from '../../context/AiSettingsContext';
 import { buildAnonymizedInsightPayload } from '../../utils/aiPayload';
 import { fetchGrokInsight } from '../../utils/aiInsights';
 import { AiInsightModal } from '../../components/AiInsightModal';
+import { ProtocolHelper } from '../../components/ProtocolHelper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { BPReadingInputSchema, parseWithSchema } from '../../src/schemas';
 
@@ -134,6 +135,8 @@ export default function LogScreen() {
         <Text style={[styles.title, { color: colors.foreground }]}>
           {isEditing ? 'Edit Reading' : 'Log New Reading'}
         </Text>
+
+        <ProtocolHelper visible={!isEditing} />
 
         {/* Live Category Preview */}
         {liveCategory && (

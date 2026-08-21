@@ -26,6 +26,7 @@ import { getReminderSettings, saveReminderSettings, type ReminderSettings } from
 import { createEncryptedBackup, decryptBackup, isEncryptedBackupFile } from '../../utils/backup';
 import { pickBackupFile, shareBackupFile } from '../../utils/backupShare';
 import { sharePdfReport } from '../../utils/pdfShare';
+import { isProtocolHidden, setProtocolHidden } from '../../utils/protocolHelper';
 import * as readingsStore from '../../src/readingsStore';
 import * as medsStore from '../../src/medsStore';
 import type { SessionCryptoKey } from '../../utils/crypto';
@@ -50,6 +51,7 @@ export default function SettingsScreen() {
   } = useCrypto();
   const { insightsEnabled, hasApiKey, setInsightsEnabled, saveApiKey, clearApiKey } = useAiSettings();
   const [apiKeyDraft, setApiKeyDraft] = useState('');
+  const [protocolHidden, setProtocolHiddenState] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminders, setReminders] = useState<ReminderSettings>({
     measurementEnabled: false,
@@ -60,7 +62,13 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     getReminderSettings().then(setReminders).catch(() => {});
+    isProtocolHidden().then(setProtocolHiddenState).catch(() => {});
   }, []);
+
+  const persistProtocolVisible = async (show: boolean) => {
+    await setProtocolHidden(!show);
+    setProtocolHiddenState(!show);
+  };
 
   const persistReminders = async (next: ReminderSettings) => {
     if (Platform.OS === 'web' && (next.measurementEnabled || next.medicationEnabled)) {
@@ -318,6 +326,24 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.foreground }}>Privacy Policy</Text>
           <Feather name="external-link" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Logging</Text>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground, flex: 1, paddingRight: 12 }}>
+            Measurement checklist
+          </Text>
+          <Switch
+            value={!protocolHidden}
+            onValueChange={persistProtocolVisible}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
+        </View>
+        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+          Free sit / feet / rest / cuff reminder on the Log screen. Preference stays on this device.
+          Not a medical protocol.
+        </Text>
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>

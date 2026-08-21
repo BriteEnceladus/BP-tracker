@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Measurement protocol helper on Log (Free): sit, feet flat, rest ~5 min, cuff at heart. Dismiss for the session or “don’t show again” (AsyncStorage preference only). Re-enable in Settings → Logging.
+
 ## 1.1.1 — 2026-08-15
 
 - CSV import is live on History and Settings (same format as export).
