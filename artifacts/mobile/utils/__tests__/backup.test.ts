@@ -21,6 +21,13 @@ describe('encrypted backup', () => {
     const original = {
       readings: [{ timestamp: '2026-08-14T12:00:00.000Z', systolic: 120, diastolic: 80 }],
       medications: [{ name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', active: true }],
+      glucose: [
+        {
+          timestamp: '2026-08-14T12:00:00.000Z',
+          valueMgdl: 99,
+          context: 'fasting' as const,
+        },
+      ],
     };
     const file = await createEncryptedBackup(key, original);
     expect(isEncryptedBackupFile(file)).toBe(true);

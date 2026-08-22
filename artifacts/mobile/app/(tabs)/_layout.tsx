@@ -40,6 +40,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="glucose"
+        options={{
+          title: 'Glucose',
+          tabBarIcon: ({ color, size }) => <Feather name="droplet" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="medications"
         options={{
           title: 'Meds',

@@ -93,6 +93,53 @@ export const MedicationInputSchema = z.object({
 
 export type MedicationInput = z.infer<typeof MedicationInputSchema>;
 
+/**
+ * Glucose is stored as canonical mg/dL (`valueMgdl`).
+ * Display unit (mg/dL | mmol/L) is a Settings preference only — never mutates stored values.
+ */
+export const GlucoseContextSchema = z.enum([
+  'fasting',
+  'before_meal',
+  'after_meal',
+  'bedtime',
+  'random',
+  'other',
+]);
+
+export type GlucoseContextTag = z.infer<typeof GlucoseContextSchema>;
+
+export const GlucoseDisplayUnitSchema = z.enum(['mg/dL', 'mmol/L']);
+export type GlucoseDisplayUnit = z.infer<typeof GlucoseDisplayUnitSchema>;
+
+/** Educational band only — not a diagnosis. */
+export const GlucoseValueMgdlSchema = z
+  .number()
+  .min(20, 'Glucose must be at least 20 mg/dL')
+  .max(600, 'Glucose must be at most 600 mg/dL');
+
+export const GlucoseReadingSchema = z.object({
+  id: z.number().int().optional(),
+  timestamp: TimestampSchema,
+  valueMgdl: GlucoseValueMgdlSchema,
+  context: GlucoseContextSchema,
+  notes: NotesSchema,
+  medicationTaken: MedicationTakenSchema,
+  createdAt: TimestampSchema.optional(),
+  updatedAt: TimestampSchema.optional(),
+});
+
+export type GlucoseReading = z.infer<typeof GlucoseReadingSchema>;
+
+export const GlucoseReadingInputSchema = z.object({
+  timestamp: TimestampSchema,
+  valueMgdl: GlucoseValueMgdlSchema,
+  context: GlucoseContextSchema,
+  notes: NotesSchema,
+  medicationTaken: MedicationTakenSchema,
+});
+
+export type GlucoseReadingInput = z.infer<typeof GlucoseReadingInputSchema>;
+
 export const EncryptedPayloadSchema = z.object({
   v: z.literal(1),
   iv: z.string().min(1),

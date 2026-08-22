@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
+import { useGlucose } from '../../context/GlucoseContext';
 import { useMeds } from '../../context/MedsContext';
 import { useCrypto } from '../../context/CryptoContext';
 import { useAiSettings } from '../../context/AiSettingsContext';
 import { usePremium } from '../../context/PremiumContext';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { readingsToCsv } from '../../utils/csvExport';
+import { glucoseToCsv, readingsToCsv } from '../../utils/csvExport';
 import { shareCsvFile } from '../../utils/csvShare';
 import { isDuplicateReading, parseCsvReadings } from '../../utils/csvImport';
 import { pickTextFile } from '../../utils/filePick';
@@ -28,6 +29,9 @@ import { createEncryptedBackup, decryptBackup, isEncryptedBackupFile } from '../
 import { pickBackupFile, shareBackupFile } from '../../utils/backupShare';
 import { sharePdfReport } from '../../utils/pdfShare';
 import { isProtocolHidden, setProtocolHidden } from '../../utils/protocolHelper';
+import { getGlucoseDisplayUnit, setGlucoseDisplayUnit } from '../../utils/glucoseUnit';
+import type { GlucoseDisplayUnit } from '../../src/schemas';
+import { getGlucoseReadingsForDays } from '../../utils/glucoseUtils';
 import { buildWidgetSnapshot } from '../../utils/widgetSnapshot';
 import {
   disableHomeWidget,
@@ -38,6 +42,7 @@ import {
 } from '../../widget/bridge';
 import * as readingsStore from '../../src/readingsStore';
 import * as medsStore from '../../src/medsStore';
+import * as glucoseStore from '../../src/glucoseStore';
 import type { SessionCryptoKey } from '../../utils/crypto';
 
 const PRIVACY_URL =
@@ -47,6 +52,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { readings, refresh, addReading } = useBP();
+  const { glucose, refresh: refreshGlucose, addGlucose } = useGlucose();
   const { medications, refresh: refreshMeds } = useMeds();
   const {
     biometricSupported,
@@ -64,17 +70,21 @@ export default function SettingsScreen() {
   const [protocolHidden, setProtocolHiddenState] = useState(false);
   const [widgetEnabled, setWidgetEnabledState] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
+  const [glucoseUnit, setGlucoseUnitState] = useState<GlucoseDisplayUnit>('mg/dL');
   const [reminders, setReminders] = useState<ReminderSettings>({
     measurementEnabled: false,
     measurementHour: 8,
     medicationEnabled: false,
     medicationHours: [8, 20],
+    glucoseEnabled: false,
+    glucoseHour: 8,
   });
 
   useEffect(() => {
     getReminderSettings().then(setReminders).catch(() => {});
     isProtocolHidden().then(setProtocolHiddenState).catch(() => {});
     getWidgetEnabled().then(setWidgetEnabledState).catch(() => setWidgetEnabledState(false));
+    getGlucoseDisplayUnit().then(setGlucoseUnitState).catch(() => {});
   }, []);
 
   const toggleHomeWidget = (value: boolean) => {
@@ -120,7 +130,7 @@ export default function SettingsScreen() {
   };
 
   const persistReminders = async (next: ReminderSettings) => {
-    if (Platform.OS === 'web' && (next.measurementEnabled || next.medicationEnabled)) {
+    if (Platform.OS === 'web' && (next.measurementEnabled || next.medicationEnabled || next.glucoseEnabled)) {
       Alert.alert('Not available on web', 'Reminders are available in the Android and iOS apps.');
       return;
     }
@@ -153,7 +163,14 @@ export default function SettingsScreen() {
       return;
     }
     try {
+      const visibleGlucose = isPremium ? glucose : getGlucoseReadingsForDays(glucose, 30);
       await shareCsvFile(readingsToCsv(readings), `bp_readings_${new Date().toISOString().split('T')[0]}.csv`);
+      if (visibleGlucose.length > 0) {
+        await shareCsvFile(
+          glucoseToCsv(visibleGlucose, glucoseUnit),
+          `glucose_${new Date().toISOString().split('T')[0]}.csv`
+        );
+      }
     } catch {
       Alert.alert('Export Failed', 'Unable to export the CSV file. Please try again.');
     }
@@ -211,7 +228,7 @@ export default function SettingsScreen() {
       return;
     }
     try {
-      await sharePdfReport(readings, { medications });
+      await sharePdfReport(readings, { medications, glucose });
     } catch {
       Alert.alert('Report failed', 'Unable to create the PDF report.');
     }
@@ -226,6 +243,7 @@ export default function SettingsScreen() {
       const backup = await createEncryptedBackup(cryptoKey as SessionCryptoKey, {
         readings,
         medications,
+        glucose,
       });
       await shareBackupFile(backup);
     } catch {
@@ -248,7 +266,7 @@ export default function SettingsScreen() {
       const data = await decryptBackup(cryptoKey as SessionCryptoKey, parsed);
       Alert.alert(
         'Replace current data?',
-        `This will replace ${readings.length} reading(s) and ${medications.length} medication(s) with ${data.readings.length} reading(s) and ${data.medications.length} medication(s) from the backup. This cannot be undone.`,
+        `This will replace ${readings.length} BP reading(s), ${glucose.length} glucose reading(s), and ${medications.length} medication(s) with ${data.readings.length} BP, ${data.glucose.length} glucose, and ${data.medications.length} medication(s). This cannot be undone.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -258,6 +276,7 @@ export default function SettingsScreen() {
               const key = cryptoKey as SessionCryptoKey;
               await readingsStore.clearAllReadings();
               await medsStore.clearAllMedications();
+              await glucoseStore.clearAllGlucose();
               for (const reading of data.readings) {
                 const { id: _id, createdAt: _c, updatedAt: _u, ...input } = reading;
                 await readingsStore.addReading(input, key);
@@ -266,8 +285,13 @@ export default function SettingsScreen() {
                 const { id: _id, createdAt: _c, updatedAt: _u, ...input } = med;
                 await medsStore.addMedication(input, key);
               }
+              for (const row of data.glucose) {
+                const { id: _id, createdAt: _c, updatedAt: _u, ...input } = row;
+                await glucoseStore.addGlucose(input, key);
+              }
               await refresh();
               await refreshMeds();
+              await refreshGlucose();
               Alert.alert('Restore complete', 'Your encrypted backup has been restored on this device.');
             },
           },
@@ -284,7 +308,7 @@ export default function SettingsScreen() {
   const clearAllData = () => {
     Alert.alert(
       'Clear All Data?',
-      `This permanently deletes ${readings.length} reading(s) and ${medications.length} medication(s) on this device. This cannot be undone.`,
+      `This permanently deletes ${readings.length} BP reading(s), ${glucose.length} glucose reading(s), and ${medications.length} medication(s) on this device. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -294,8 +318,10 @@ export default function SettingsScreen() {
             try {
               await readingsStore.clearAllReadings();
               await medsStore.clearAllMedications();
+              await glucoseStore.clearAllGlucose();
               await refresh();
               await refreshMeds();
+              await refreshGlucose();
               Alert.alert('Data Cleared', 'All readings and medications have been deleted.');
             } catch {
               Alert.alert('Error', 'Could not clear all data.');
@@ -416,6 +442,36 @@ export default function SettingsScreen() {
           Free sit / feet / rest / cuff reminder on the Log screen. Preference stays on this device.
           Not a medical protocol.
         </Text>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground, flex: 1, paddingRight: 12 }}>
+            Glucose display unit
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {(['mg/dL', 'mmol/L'] as const).map((u) => (
+              <TouchableOpacity
+                key={u}
+                onPress={async () => {
+                  await setGlucoseDisplayUnit(u);
+                  setGlucoseUnitState(u);
+                }}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: glucoseUnit === u ? colors.primary : colors.background,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={{ color: glucoseUnit === u ? colors.primaryForeground : colors.foreground, fontSize: 12 }}>
+                  {u}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+          Stored as mg/dL. This toggle only changes how numbers are shown. Not a medical device.
+        </Text>
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -495,6 +551,23 @@ export default function SettingsScreen() {
             value={reminders.medicationEnabled}
             disabled={reminderBusy}
             onValueChange={(value) => persistReminders({ ...reminders, medicationEnabled: value })}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
+        </View>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground, flex: 1, paddingRight: 12 }}>
+            Glucose reminder {isPremium ? '' : '(Pro)'}
+          </Text>
+          <Switch
+            value={isPremium && reminders.glucoseEnabled}
+            disabled={reminderBusy}
+            onValueChange={(value) => {
+              if (value && !isPremium) {
+                requirePro('reminders');
+                return;
+              }
+              persistReminders({ ...reminders, glucoseEnabled: value, glucoseHour: reminders.glucoseHour ?? 8 });
+            }}
             trackColor={{ false: colors.border, true: colors.primary }}
           />
         </View>

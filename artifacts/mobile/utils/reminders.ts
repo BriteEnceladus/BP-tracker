@@ -8,6 +8,8 @@ export interface ReminderSettings {
   measurementHour: number;
   medicationEnabled: boolean;
   medicationHours: number[];
+  glucoseEnabled: boolean;
+  glucoseHour: number;
 }
 
 const DEFAULTS: ReminderSettings = {
@@ -15,6 +17,8 @@ const DEFAULTS: ReminderSettings = {
   measurementHour: 8,
   medicationEnabled: false,
   medicationHours: [8, 20],
+  glucoseEnabled: false,
+  glucoseHour: 8,
 };
 
 export async function getReminderSettings(): Promise<ReminderSettings> {
@@ -59,7 +63,7 @@ async function applyScheduledNotifications(settings: ReminderSettings): Promise<
 
   await Notifications.cancelAllScheduledNotificationsAsync();
 
-  if (settings.measurementEnabled || settings.medicationEnabled) {
+  if (settings.measurementEnabled || settings.medicationEnabled || settings.glucoseEnabled) {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') {
       throw new Error('Notification permission was not granted');
@@ -76,6 +80,21 @@ async function applyScheduledNotifications(settings: ReminderSettings): Promise<
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: settings.measurementHour,
+        minute: 0,
+      },
+    });
+  }
+
+  if (settings.glucoseEnabled) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Time to log glucose',
+        body: 'Record a glucose reading if your clinician asked you to check. Not medical advice.',
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: settings.glucoseHour,
         minute: 0,
       },
     });

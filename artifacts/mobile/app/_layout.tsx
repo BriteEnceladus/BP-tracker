@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BPProvider } from '../context/BPContext';
 import { MedsProvider } from '../context/MedsContext';
+import { GlucoseProvider } from '../context/GlucoseContext';
 import { AiSettingsProvider } from '../context/AiSettingsContext';
 import { PremiumProvider } from '../context/PremiumContext';
 import { CryptoProvider, useCrypto } from '../context/CryptoContext';
@@ -54,11 +55,13 @@ function RootLayoutNav() {
       <AiSettingsProvider>
         <BPProvider>
           <MedsProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              {showOnboarding && <Stack.Screen name="onboarding" />}
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="reading/[id]" />
-            </Stack>
+            <GlucoseProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                {showOnboarding && <Stack.Screen name="onboarding" />}
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="reading/[id]" />
+              </Stack>
+            </GlucoseProvider>
           </MedsProvider>
         </BPProvider>
       </AiSettingsProvider>

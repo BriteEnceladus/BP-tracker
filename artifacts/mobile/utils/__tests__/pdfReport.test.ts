@@ -63,6 +63,7 @@ describe('buildPdfHtml', () => {
       {
         now: new Date(2026, 5, 15),
         medications: [{ name: 'Lisinopril', dosage: '10 mg', frequency: 'daily', active: true }],
+        glucose: [{ timestamp: new Date(2026, 5, 2, 8).toISOString(), valueMgdl: 99, context: 'fasting' }],
         target: { systolic: 130, diastolic: 80, hitPercent: 100 },
         streak: { current: 4, best: 12 },
       }
@@ -71,6 +72,7 @@ describe('buildPdfHtml', () => {
     expect(html).toContain('Monthly averages');
     expect(html).toContain('Category counts');
     expect(html).toContain('Lisinopril');
+    expect(html).toContain('Glucose (mg/dL');
     expect(html).toContain('In personal target');
     expect(html).toContain('Logging streak');
     expect(html).toContain(PDF_DISCLAIMER);

@@ -20,21 +20,30 @@ import { buildAnonymizedInsightPayload } from '../../utils/aiPayload';
 import { fetchGrokInsight } from '../../utils/aiInsights';
 import { AiInsightModal } from '../../components/AiInsightModal';
 import { ProtocolHelper } from '../../components/ProtocolHelper';
+import { GlucoseLogForm } from '../../components/GlucoseLogForm';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { BPReadingInputSchema, parseWithSchema } from '../../src/schemas';
+import { useGlucose } from '../../context/GlucoseContext';
 
 export default function LogScreen() {
   const colors = useColors();
   const { readings, addReading, updateReading } = useBP();
+  const { glucose } = useGlucose();
   const { insightsEnabled, hasApiKey, getApiKey } = useAiSettings();
   const [insightOpen, setInsightOpen] = useState(false);
   const [insightLoading, setInsightLoading] = useState(false);
   const [insightText, setInsightText] = useState<string | null>(null);
   const [insightError, setInsightError] = useState<string | null>(null);
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; metric?: string; gid?: string }>();
+  const [metric, setMetric] = useState<'bp' | 'glucose'>(
+    params.metric === 'glucose' || params.gid ? 'glucose' : 'bp'
+  );
 
   const editingReading = params.id
     ? readings.find((r) => r.id === Number(params.id))
+    : null;
+  const editingGlucose = params.gid
+    ? glucose.find((r) => r.id === Number(params.gid)) ?? null
     : null;
 
   const [systolic, setSystolic] = useState(editingReading?.systolic?.toString() || '');
@@ -133,13 +142,43 @@ export default function LogScreen() {
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.foreground }]}>
-          {isEditing ? 'Edit Reading' : 'Log New Reading'}
+          {metric === 'glucose'
+            ? editingGlucose
+              ? 'Edit glucose'
+              : 'Log glucose'
+            : isEditing
+              ? 'Edit Reading'
+              : 'Log New Reading'}
         </Text>
 
-        <ProtocolHelper visible={!isEditing} />
+        <View style={styles.metricRow}>
+          {(['bp', 'glucose'] as const).map((m) => {
+            const on = metric === m;
+            return (
+              <TouchableOpacity
+                key={m}
+                onPress={() => setMetric(m)}
+                style={[
+                  styles.metricChip,
+                  {
+                    backgroundColor: on ? colors.primary : colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={{ color: on ? colors.primaryForeground : colors.foreground, fontWeight: '600' }}>
+                  {m === 'bp' ? 'Blood pressure' : 'Glucose'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-        {/* Live Category Preview */}
-        {liveCategory && (
+        {metric === 'glucose' ? <GlucoseLogForm editing={editingGlucose} /> : null}
+
+        {metric === 'bp' ? <ProtocolHelper visible={!isEditing} /> : null}
+
+        {metric === 'bp' && liveCategory && (
           <View style={[styles.categoryPreview, { backgroundColor: liveCategory.color + '18' }]}>
             <Text style={[styles.categoryLabel, { color: liveCategory.color }]}>
               {liveCategory.label}
@@ -147,6 +186,8 @@ export default function LogScreen() {
           </View>
         )}
 
+        {metric === 'bp' ? (
+        <>
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: colors.mutedForeground }]}>Date & Time</Text>
           <TouchableOpacity
@@ -270,6 +311,8 @@ export default function LogScreen() {
             <Text style={{ color: colors.mutedForeground }}>Cancel</Text>
           </TouchableOpacity>
         )}
+        </>
+        ) : null}
       </ScrollView>
       <AiInsightModal
         visible={insightOpen}
@@ -350,6 +393,18 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: 18,
+    alignItems: 'center',
+  },
+  metricRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  metricChip: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
     alignItems: 'center',
   },
 });

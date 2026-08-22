@@ -18,6 +18,10 @@ const lightColors = {
   chartSystolic: '#1E7ADB',
   chartDiastolic: '#0EA5A0',
   chartBPM: '#8B5CF6',
+  glucoseLow: '#2563EB',
+  glucoseNormal: '#16A34A',
+  glucoseElevated: '#D97706',
+  glucoseHigh: '#DC2626',
   radius: 12,
 };
 
@@ -39,6 +43,10 @@ const darkColors = {
   chartSystolic: '#60A5FA',
   chartDiastolic: '#14B8A6',
   chartBPM: '#A78BFA',
+  glucoseLow: '#60A5FA',
+  glucoseNormal: '#22C55E',
+  glucoseElevated: '#FBBF24',
+  glucoseHigh: '#EF4444',
   radius: 16,                 // Slightly rounder to match polished cards
 };
 

@@ -1,8 +1,8 @@
-import { BPReading, Medication } from '../src/schemas';
+import { BPReading, GlucoseReading, Medication } from '../src/schemas';
 import { decryptData, encryptData, type EncryptedData, type SessionCryptoKey } from './crypto';
 
 export const BACKUP_FORMAT = 'bp-tracker-backup';
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 
 export interface EncryptedBackupFile {
   format: typeof BACKUP_FORMAT;
@@ -14,6 +14,7 @@ export interface EncryptedBackupFile {
 export interface BackupPlaintext {
   readings: BPReading[];
   medications: Medication[];
+  glucose: GlucoseReading[];
 }
 
 export function isEncryptedBackupFile(value: unknown): value is EncryptedBackupFile {
@@ -21,7 +22,7 @@ export function isEncryptedBackupFile(value: unknown): value is EncryptedBackupF
   const file = value as EncryptedBackupFile;
   return (
     file.format === BACKUP_FORMAT &&
-    file.v === BACKUP_VERSION &&
+    (file.v === 1 || file.v === BACKUP_VERSION) &&
     typeof file.createdAt === 'string' &&
     !!file.encrypted?.iv &&
     !!file.encrypted?.payload
@@ -53,5 +54,9 @@ export async function decryptBackup(
   if (!Array.isArray(parsed.readings) || !Array.isArray(parsed.medications)) {
     throw new Error('Backup contents are not valid');
   }
-  return parsed;
+  return {
+    readings: parsed.readings,
+    medications: parsed.medications,
+    glucose: Array.isArray(parsed.glucose) ? parsed.glucose : [],
+  };
 }

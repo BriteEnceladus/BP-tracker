@@ -1,4 +1,4 @@
-import type { BPReading } from '../src/schemas';
+import type { BPReading, GlucoseReading } from '../src/schemas';
 import {
   getAverages,
   getBPCategory,
@@ -19,6 +19,7 @@ export type PdfMed = {
 
 export type PdfReportOptions = {
   medications?: PdfMed[];
+  glucose?: GlucoseReading[];
   target?: { systolic: number; diastolic: number; hitPercent: number | null } | null;
   streak?: { current: number; best: number } | null;
   now?: Date;
@@ -163,6 +164,18 @@ export function buildPdfHtml(readings: BPReading[], options: PdfReportOptions = 
       </tr>`
     )
     .join('');
+  const glucoseRows = (options.glucose ?? [])
+    .slice()
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 40)
+    .map(
+      (g) => `<tr>
+        <td>${escapeHtml(new Date(g.timestamp).toLocaleString())}</td>
+        <td>${Math.round(g.valueMgdl)}</td>
+        <td>${escapeHtml(g.context)}</td>
+      </tr>`
+    )
+    .join('');
 
   const targetBlock =
     options.target != null
@@ -209,6 +222,13 @@ export function buildPdfHtml(readings: BPReading[], options: PdfReportOptions = 
   <table>
     <thead><tr><th>Name</th><th>Dosage</th><th>Frequency</th></tr></thead>
     <tbody>${medRows || '<tr><td colspan="3">No active medications listed.</td></tr>'}</tbody>
+  </table>
+
+  <h2>Glucose (mg/dL, last entries)</h2>
+  <p class="muted">Educational log only. Not diagnostic. Notes omitted.</p>
+  <table>
+    <thead><tr><th>When</th><th>mg/dL</th><th>Context</th></tr></thead>
+    <tbody>${glucoseRows || '<tr><td colspan="3">No glucose readings.</td></tr>'}</tbody>
   </table>
 
   <div class="page-break"></div>

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Glucose module (encrypted, canonical mg/dL). Dedicated tab + Log switcher. Free: 30-day history. Pro: 90d/All, CSV import, backup/PDF inclusion, glucose reminders. Educational range bands only — not diagnostic.
 - Measurement protocol helper on Log (Free): sit, feet flat, rest ~5 min, cuff at heart. Dismiss for the session or “don’t show again” (AsyncStorage preference only). Re-enable in Settings → Logging.
 - Time-of-day averages on Dashboard (Free, last 30 days, local clock). Pro adds per-bucket counts and the peak window. Fully on-device.
 - Meds vs BP: local averages for readings marked taken vs not (need ≥3 in each group). Basic text is Free; two-bar systolic chart is Pro.

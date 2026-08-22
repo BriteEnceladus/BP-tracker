@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -13,9 +13,11 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useBP } from "@/context/BPContext";
+import { useGlucose } from "@/context/GlucoseContext";
 import { useMeds } from "@/context/MedsContext";
 import { usePremium } from "@/context/PremiumContext";
 import { BPCard } from "@/components/BPCard";
+import { GlucoseCard } from "@/components/GlucoseCard";
 import { BPChart } from "@/components/BPChart";
 import { StatCard } from "@/components/StatCard";
 import { TimeOfDayCard } from "@/components/TimeOfDayCard";
@@ -29,13 +31,22 @@ import {
 import { summarizeTimeOfDay } from "@/utils/timeOfDay";
 import { summarizeMedsVsBp } from "@/utils/medAdherence";
 import { setDailyReminderEnabled } from "@/utils/reminders";
+import { getGlucoseAverage, getGlucoseReadingsForDays, GLUCOSE_DISCLAIMER } from "@/utils/glucoseUtils";
+import { getGlucoseDisplayUnit } from "@/utils/glucoseUnit";
+import type { GlucoseDisplayUnit } from "@/src/schemas";
 
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { readings, isLoading } = useBP();
+  const { glucose } = useGlucose();
   const { medications } = useMeds();
   const { isPremium, requirePro } = usePremium();
+  const [glucoseUnit, setGlucoseUnit] = useState<GlucoseDisplayUnit>('mg/dL');
+
+  useEffect(() => {
+    getGlucoseDisplayUnit().then(setGlucoseUnit);
+  }, []);
 
   const sortedReadings = useMemo(() => {
     return [...readings].sort(
@@ -44,6 +55,9 @@ export default function DashboardScreen() {
   }, [readings]);
 
   const latest = sortedReadings[0] ?? null;
+  const latestGlucose = glucose[0] ?? null;
+  const glucose7d = useMemo(() => getGlucoseReadingsForDays(glucose, 7), [glucose]);
+  const glucoseAvg7d = getGlucoseAverage(glucose7d);
 
   const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
   const averages = useMemo(() => getAverages(last7Days), [last7Days]);
@@ -166,6 +180,47 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
           )}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
+              Latest glucose
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/glucose")}>
+              <Text style={{ color: colors.primary, fontWeight: "600" }}>See all →</Text>
+            </TouchableOpacity>
+          </View>
+          {latestGlucose ? (
+            <TouchableOpacity
+              onPress={() =>
+                router.push({ pathname: "/(tabs)/log", params: { metric: "glucose", gid: String(latestGlucose.id) } })
+              }
+            >
+              <GlucoseCard reading={latestGlucose} unit={glucoseUnit} />
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Feather name="droplet" size={28} color={colors.primary} />
+              <Text style={{ color: colors.foreground, fontWeight: "600", marginTop: 10 }}>
+                Log your first glucose reading
+              </Text>
+              <Text style={{ color: colors.mutedForeground, textAlign: "center", marginTop: 6 }}>
+                {GLUCOSE_DISCLAIMER}
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: "/(tabs)/log", params: { metric: "glucose" } })}
+              >
+                <Text style={{ color: colors.primary, marginTop: 10, fontWeight: "600" }}>Log glucose →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {glucose7d.length > 0 && glucoseAvg7d != null ? (
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }}>
+              7-day average {glucoseAvg7d} mg/dL ({glucose7d.length} reading{glucose7d.length === 1 ? "" : "s"}).
+              Generic reference bands only.
+            </Text>
+          ) : null}
         </View>
 
         {/* Stats - Bold data row */}

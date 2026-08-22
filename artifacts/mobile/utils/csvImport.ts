@@ -1,4 +1,13 @@
-import { BPReadingInputSchema, parseWithSchema, type BPReadingInput } from '../src/schemas';
+import {
+  BPReadingInputSchema,
+  GlucoseContextSchema,
+  GlucoseReadingInputSchema,
+  parseWithSchema,
+  type BPReadingInput,
+  type GlucoseContextTag,
+  type GlucoseReadingInput,
+} from '../src/schemas';
+import { mmolToMgdl } from './glucoseUtils';
 
 export interface CsvImportResult {
   readings: BPReadingInput[];
@@ -131,5 +140,84 @@ export function isDuplicateReading(
       reading.timestamp === incoming.timestamp &&
       reading.systolic === incoming.systolic &&
       reading.diastolic === incoming.diastolic
+  );
+}
+
+function parseContext(value: string): GlucoseContextTag {
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, '_');
+  const aliases: Record<string, GlucoseContextTag> = {
+    fasting: 'fasting',
+    before_meal: 'before_meal',
+    beforemeal: 'before_meal',
+    after_meal: 'after_meal',
+    aftermeal: 'after_meal',
+    bedtime: 'bedtime',
+    random: 'random',
+    other: 'other',
+  };
+  return aliases[normalized] ?? 'other';
+}
+
+export interface GlucoseCsvImportResult {
+  readings: GlucoseReadingInput[];
+  errors: string[];
+}
+
+export function parseCsvGlucose(csv: string): GlucoseCsvImportResult {
+  const rows = parseCsvRows(csv);
+  if (rows.length < 2) {
+    return { readings: [], errors: ['CSV must include a header row and at least one reading.'] };
+  }
+  const header = rows[0].map((cell) => cell.trim().toLowerCase());
+  const tsIdx = findColumn(header, ['timestamp', 'date', 'time']);
+  const valueIdx = findColumn(header, ['value', 'glucose', 'mg/dl', 'mmol']);
+  const unitIdx = findColumn(header, ['unit']);
+  const contextIdx = findColumn(header, ['context']);
+  const notesIdx = findColumn(header, ['notes', 'note']);
+  const medIdx = findColumn(header, ['medication', 'meds']);
+  if (tsIdx < 0 || valueIdx < 0) {
+    return { readings: [], errors: ['CSV header must include Timestamp and Value columns.'] };
+  }
+
+  const readings: GlucoseReadingInput[] = [];
+  const errors: string[] = [];
+  rows.slice(1).forEach((row, index) => {
+    const line = index + 2;
+    const iso = toIsoTimestamp(row[tsIdx] ?? '');
+    if (!iso) {
+      errors.push(`Row ${line}: invalid date/time`);
+      return;
+    }
+    const rawValue = Number(row[valueIdx]);
+    const unit = (row[unitIdx] ?? 'mg/dL').toLowerCase();
+    const valueMgdl = unit.includes('mmol') ? mmolToMgdl(rawValue) : Math.round(rawValue);
+    const contextRaw = contextIdx >= 0 ? row[contextIdx] ?? 'random' : 'random';
+    const parsedContext = GlucoseContextSchema.safeParse(parseContext(contextRaw));
+    const input = {
+      timestamp: iso,
+      valueMgdl,
+      context: parsedContext.success ? parsedContext.data : 'other',
+      notes: notesIdx >= 0 ? row[notesIdx]?.trim() || undefined : undefined,
+      medicationTaken: medIdx >= 0 ? parseMedication(row[medIdx] ?? '') : undefined,
+    };
+    const parsed = parseWithSchema(GlucoseReadingInputSchema, input);
+    if (!parsed.success) {
+      errors.push(`Row ${line}: ${parsed.errors[0]}`);
+      return;
+    }
+    readings.push(parsed.data);
+  });
+  return { readings, errors };
+}
+
+export function isDuplicateGlucose(
+  existing: Array<Pick<GlucoseReadingInput, 'timestamp' | 'valueMgdl' | 'context'>>,
+  incoming: GlucoseReadingInput
+): boolean {
+  return existing.some(
+    (row) =>
+      row.timestamp === incoming.timestamp &&
+      row.valueMgdl === incoming.valueMgdl &&
+      row.context === incoming.context
   );
 }
