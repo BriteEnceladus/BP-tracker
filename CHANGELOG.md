@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Remove leftover Replit hosting files (empty `.replit` / `replit.md` stubs and the old `ReplitExport-RyanFrost5.tar.gz` snapshot). App is standalone Expo + EAS only.
 - Safer legacy medication migration: keep plaintext meds if encrypted persist fails; skip corrupt JSON.
 - History undo timeout is stored in a ref so timers clear on unmount without extra renders.
 - Local Android development build via `npx expo run:android` (`expo-dev-client`). Expo Go cannot run native AES-256-GCM.

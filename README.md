@@ -73,7 +73,8 @@ Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name L
 ```
 
 - Plug in a phone with USB debugging, or enable the Android Emulator hypervisor driver (AEHD). This machine has no hypervisor, so the emulator will not boot.
-- Cloud alternative (no local NDK): `eas build --platform android --profile development`
+- For installable APKs on Windows, use **EAS cloud** (`eas build --platform android --profile preview`). Do not use `eas build --local`.
+- Cloud development-client APK (no local NDK): `eas build --platform android --profile development`
 
 ### Run Metro only (web / already-installed client)
 ```powershell
@@ -83,8 +84,12 @@ pnpm dev
 ```
 
 ### Build APK for Android (Preview)
-```bash
+
+Cloud EAS only (Windows: do not pass `--local`):
+
+```powershell
 cd artifacts/mobile
+pnpm install
 eas build --platform android --profile preview
 ```
 
