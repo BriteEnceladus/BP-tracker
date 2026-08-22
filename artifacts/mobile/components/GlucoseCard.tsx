@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useColors } from '../hooks/useColors';
 import type { GlucoseDisplayUnit, GlucoseReading } from '../src/schemas';
@@ -9,13 +9,16 @@ import {
   getGlucoseBandLabel,
   getGlucoseContextLabel,
 } from '../utils/glucoseUtils';
+import { isGlucoseInTarget } from '../utils/targets';
 
-export function GlucoseCard({
+function GlucoseCardInner({
   reading,
   unit,
+  targetMgdl,
 }: {
   reading: GlucoseReading;
   unit: GlucoseDisplayUnit;
+  targetMgdl?: number;
 }) {
   const colors = useColors();
   const band = getGlucoseBand(reading.valueMgdl);
@@ -40,7 +43,14 @@ export function GlucoseCard({
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: accent + '22' }]}>
-          <Text style={[styles.badgeText, { color: accent }]}>{getGlucoseBandLabel(band)}</Text>
+          <Text style={[styles.badgeText, { color: accent }]}>
+            {getGlucoseBandLabel(band)}
+            {targetMgdl != null
+              ? isGlucoseInTarget(reading.valueMgdl, { glucoseMgdl: targetMgdl })
+                ? ' · In target'
+                : ' · Above target'
+              : ''}
+          </Text>
         </View>
       </View>
       {reading.notes ? (
@@ -51,6 +61,8 @@ export function GlucoseCard({
     </View>
   );
 }
+
+export const GlucoseCard = memo(GlucoseCardInner);
 
 const styles = StyleSheet.create({
   card: {

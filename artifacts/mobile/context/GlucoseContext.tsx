@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { Platform } from 'react-native';
@@ -80,28 +81,36 @@ export function GlucoseProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh, isUnlocked, cryptoKey]);
 
-  const addGlucose = async (readingData: GlucoseReadingInput) => {
-    await store.addGlucose(readingData, getKey());
-    if (Platform.OS !== 'web') await refresh();
-  };
-
-  const updateGlucose = async (id: number, updates: Partial<GlucoseReadingInput>) => {
-    await store.updateGlucose(id, updates, getKey());
-    if (Platform.OS !== 'web') await refresh();
-  };
-
-  const deleteGlucose = async (id: number) => {
-    await store.deleteGlucose(id, getKey());
-    if (Platform.OS !== 'web') await refresh();
-  };
-
-  return (
-    <GlucoseContext.Provider
-      value={{ glucose, isLoading, addGlucose, updateGlucose, deleteGlucose, refresh }}
-    >
-      {children}
-    </GlucoseContext.Provider>
+  const addGlucose = useCallback(
+    async (readingData: GlucoseReadingInput) => {
+      await store.addGlucose(readingData, getKey());
+      if (Platform.OS !== 'web') await refresh();
+    },
+    [getKey, refresh]
   );
+
+  const updateGlucose = useCallback(
+    async (id: number, updates: Partial<GlucoseReadingInput>) => {
+      await store.updateGlucose(id, updates, getKey());
+      if (Platform.OS !== 'web') await refresh();
+    },
+    [getKey, refresh]
+  );
+
+  const deleteGlucose = useCallback(
+    async (id: number) => {
+      await store.deleteGlucose(id, getKey());
+      if (Platform.OS !== 'web') await refresh();
+    },
+    [getKey, refresh]
+  );
+
+  const value = useMemo(
+    () => ({ glucose, isLoading, addGlucose, updateGlucose, deleteGlucose, refresh }),
+    [glucose, isLoading, addGlucose, updateGlucose, deleteGlucose, refresh]
+  );
+
+  return <GlucoseContext.Provider value={value}>{children}</GlucoseContext.Provider>;
 }
 
 export function useGlucose() {

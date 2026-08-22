@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -7,18 +7,20 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { useColors } from '../../hooks/useColors';
 import { useGlucose } from '../../context/GlucoseContext';
 import { usePremium } from '../../context/PremiumContext';
+import { useGlucosePrefs } from '../../context/GlucosePrefsContext';
+import { useTarget } from '../../context/TargetContext';
 import { GlucoseCard } from '../../components/GlucoseCard';
 import { GlucoseChart } from '../../components/GlucoseChart';
+import { GlucoseInsightCard } from '../../components/GlucoseInsightCard';
 import { StatCard } from '../../components/StatCard';
-import type { GlucoseDisplayUnit, GlucoseReading } from '../../src/schemas';
+import type { GlucoseReading } from '../../src/schemas';
 import {
   GLUCOSE_DISCLAIMER,
   formatGlucoseValue,
   getGlucoseAverage,
   getGlucoseReadingsForDays,
-  glucoseInsightLine,
 } from '../../utils/glucoseUtils';
-import { getGlucoseDisplayUnit } from '../../utils/glucoseUnit';
+import { generateGlucoseInsight } from '../../utils/glucoseInsights';
 import { glucoseToCsv } from '../../utils/csvExport';
 import { shareCsvFile } from '../../utils/csvShare';
 import { isDuplicateGlucose, parseCsvGlucose } from '../../utils/csvImport';
@@ -37,12 +39,9 @@ export default function GlucoseHistoryScreen() {
   const insets = useSafeAreaInsets();
   const { glucose, isLoading, deleteGlucose, addGlucose } = useGlucose();
   const { isPremium, requirePro } = usePremium();
+  const { unit } = useGlucosePrefs();
+  const { target } = useTarget();
   const [range, setRange] = useState<Range>(30);
-  const [unit, setUnit] = useState<GlucoseDisplayUnit>('mg/dL');
-
-  useEffect(() => {
-    getGlucoseDisplayUnit().then(setUnit);
-  }, []);
 
   const effectiveRange: Range = isPremium || (range !== 0 && range <= 30) ? range : 30;
   const filtered = useMemo(
@@ -54,7 +53,16 @@ export default function GlucoseHistoryScreen() {
     [filtered]
   );
   const avg = getGlucoseAverage(filtered);
-  const insight = glucoseInsightLine(getGlucoseReadingsForDays(glucose, 7));
+  const insightCard = useMemo(
+    () => generateGlucoseInsight(filtered.length ? filtered : glucose, target.glucoseMgdl),
+    [filtered, glucose, target.glucoseMgdl]
+  );
+  const deleteRow = useCallback(
+    (id: number) => {
+      deleteGlucose(id).catch(() => {});
+    },
+    [deleteGlucose]
+  );
 
   const setRangeOrPaywall = (value: Range) => {
     if ((value === 90 || value === 0) && !isPremium) {
@@ -120,7 +128,7 @@ export default function GlucoseHistoryScreen() {
         borderTopRightRadius: 12,
         borderBottomRightRadius: 12,
       }}
-      onPress={() => item.id != null && deleteGlucose(item.id)}
+      onPress={() => item.id != null && deleteRow(item.id)}
     >
       <Feather name="trash-2" size={24} color="#FFFFFF" />
     </TouchableOpacity>
@@ -209,11 +217,7 @@ export default function GlucoseHistoryScreen() {
                 />
                 <StatCard label="Readings" value={sorted.length} />
               </View>
-              {insight ? (
-                <Text style={{ color: colors.mutedForeground, fontSize: 12, lineHeight: 18, marginTop: 12 }}>
-                  {insight}
-                </Text>
-              ) : null}
+              {insightCard ? <GlucoseInsightCard card={insightCard} /> : null}
             </View>
           }
           renderItem={({ item }) => (
@@ -224,11 +228,15 @@ export default function GlucoseHistoryScreen() {
                   router.push({ pathname: '/(tabs)/log', params: { metric: 'glucose', gid: String(item.id) } })
                 }
               >
-                <GlucoseCard reading={item} unit={unit} />
+                <GlucoseCard reading={item} unit={unit} targetMgdl={target.glucoseMgdl} />
               </TouchableOpacity>
             </Swipeable>
           )}
           contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews
         />
       )}
     </View>

@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Line, Polyline, Circle } from 'react-native-svg';
 import { useColors } from '../hooks/useColors';
 import type { GlucoseDisplayUnit, GlucoseReading } from '../src/schemas';
 import { formatGlucoseValue } from '../utils/glucoseUtils';
+import { downsampleEven } from '../utils/chartDownsample';
 
-export function GlucoseChart({
+function GlucoseChartInner({
   readings,
   unit,
   height = 220,
@@ -25,9 +26,12 @@ export function GlucoseChart({
     );
   }
 
-  const sorted = [...readings].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
+  const sorted = useMemo(() => {
+    const chronological = [...readings].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    return downsampleEven(chronological, 48);
+  }, [readings]);
   const values = sorted.map((r) => r.valueMgdl);
   const maxValue = Math.max(...values) + 10;
   const minValue = Math.max(0, Math.min(...values) - 10);
@@ -64,6 +68,8 @@ export function GlucoseChart({
     </View>
   );
 }
+
+export const GlucoseChart = memo(GlucoseChartInner);
 
 const styles = StyleSheet.create({
   container: {

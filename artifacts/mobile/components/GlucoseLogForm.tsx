@@ -13,7 +13,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useColors } from '../hooks/useColors';
 import { useGlucose } from '../context/GlucoseContext';
-import { GlucoseReadingInputSchema, parseWithSchema, type GlucoseContextTag, type GlucoseDisplayUnit, type GlucoseReading } from '../src/schemas';
+import { useGlucosePrefs } from '../context/GlucosePrefsContext';
+import { useTarget } from '../context/TargetContext';
+import { isGlucoseInTarget } from '../utils/targets';
+import { GlucoseReadingInputSchema, parseWithSchema, type GlucoseContextTag, type GlucoseReading } from '../src/schemas';
 import {
   GLUCOSE_CONTEXTS,
   GLUCOSE_DISCLAIMER,
@@ -23,14 +26,13 @@ import {
   getGlucoseBandLabel,
   parseDisplayInput,
 } from '../utils/glucoseUtils';
-import { getGlucoseDisplayUnit } from '../utils/glucoseUnit';
-
 export function GlucoseLogForm({ editing }: { editing: GlucoseReading | null }) {
   const colors = useColors();
   const { addGlucose, updateGlucose } = useGlucose();
-  const [unit, setUnit] = useState<GlucoseDisplayUnit>('mg/dL');
+  const { unit } = useGlucosePrefs();
+  const { target } = useTarget();
   const [value, setValue] = useState(
-    editing ? formatGlucoseValue(editing.valueMgdl, 'mg/dL') : ''
+    editing ? formatGlucoseValue(editing.valueMgdl, unit) : ''
   );
   const [context, setContext] = useState<GlucoseContextTag>(editing?.context ?? 'random');
   const [notes, setNotes] = useState(editing?.notes || '');
@@ -39,18 +41,20 @@ export function GlucoseLogForm({ editing }: { editing: GlucoseReading | null }) 
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
-    getGlucoseDisplayUnit().then((next) => {
-      setUnit(next);
-      if (editing) setValue(formatGlucoseValue(editing.valueMgdl, next));
-    });
-  }, [editing]);
+    if (editing) setValue(formatGlucoseValue(editing.valueMgdl, unit));
+  }, [editing, unit]);
 
   const liveBand = useMemo(() => {
     const mgdl = parseDisplayInput(value, unit);
     if (mgdl == null) return null;
     const band = getGlucoseBand(mgdl);
-    return { band, color: getGlucoseBandColor(band, colors), label: getGlucoseBandLabel(band) };
-  }, [value, unit, colors]);
+    const inTarget = isGlucoseInTarget(mgdl, target);
+    return {
+      band,
+      color: getGlucoseBandColor(band, colors),
+      label: `${getGlucoseBandLabel(band)}${inTarget ? ' · Below your target' : ' · Above your target'}`,
+    };
+  }, [value, unit, colors, target]);
 
   const handleSave = async () => {
     const mgdl = parseDisplayInput(value, unit);

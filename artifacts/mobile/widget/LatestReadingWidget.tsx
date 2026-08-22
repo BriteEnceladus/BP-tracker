@@ -2,6 +2,7 @@
 import React from 'react';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 import type { BPCategory } from '../utils/bpUtils';
+import type { GlucoseBand } from '../utils/glucoseUtils';
 import type { WidgetSnapshot } from '../utils/widgetSnapshot';
 
 const LOG_URI = 'bptracker://log';
@@ -14,6 +15,13 @@ const CATEGORY_COLOR: Record<BPCategory, `#${string}`> = {
   crisis: '#EF4444',
 };
 
+const GLUCOSE_COLOR: Record<GlucoseBand, `#${string}`> = {
+  low: '#60A5FA',
+  inRange: '#22C55E',
+  elevated: '#FBBF24',
+  high: '#EF4444',
+};
+
 function statusCopy(snapshot: WidgetSnapshot): string {
   if (snapshot.reason === 'locked') return 'Unlock to show latest';
   if (snapshot.reason === 'off') return 'Numbers hidden';
@@ -21,16 +29,20 @@ function statusCopy(snapshot: WidgetSnapshot): string {
 }
 
 export function LatestReadingWidget({ snapshot }: { snapshot: WidgetSnapshot }) {
-  const show = snapshot.showNumbers && snapshot.systolic != null && snapshot.diastolic != null;
+  const showBp = snapshot.showNumbers && snapshot.systolic != null && snapshot.diastolic != null;
+  const showGlu = snapshot.showNumbers && snapshot.glucoseMgdl != null;
+  const show = showBp || showGlu;
   const color = snapshot.category ? CATEGORY_COLOR[snapshot.category] : '#14B8A6';
+  const gluColor = snapshot.glucoseBand ? GLUCOSE_COLOR[snapshot.glucoseBand] : '#14B8A6';
+  const uri = showGlu && !showBp ? 'bptracker://log?metric=glucose' : LOG_URI;
 
   return (
     <FlexWidget
       clickAction="OPEN_URI"
-      clickActionData={{ uri: LOG_URI }}
+      clickActionData={{ uri }}
       accessibilityLabel={
         show
-          ? `Latest blood pressure ${snapshot.systolic} over ${snapshot.diastolic}`
+          ? `Latest ${showBp ? `blood pressure ${snapshot.systolic} over ${snapshot.diastolic}` : ''} ${showGlu ? `glucose ${snapshot.glucoseMgdl}` : ''}`.trim()
           : 'BP Tracker. Open to log a reading.'
       }
       style={{
@@ -48,14 +60,24 @@ export function LatestReadingWidget({ snapshot }: { snapshot: WidgetSnapshot }) 
       />
       {show ? (
         <>
-          <TextWidget
-            text={`${snapshot.systolic}/${snapshot.diastolic}`}
-            style={{ color: '#E2EAF0', fontSize: 32, fontWeight: '700', marginTop: 4 }}
-          />
-          <TextWidget
-            text={snapshot.categoryLabel ?? ''}
-            style={{ color, fontSize: 13, fontWeight: '600', marginTop: 2 }}
-          />
+          {showBp ? (
+            <>
+              <TextWidget
+                text={`${snapshot.systolic}/${snapshot.diastolic}`}
+                style={{ color: '#E2EAF0', fontSize: 28, fontWeight: '700', marginTop: 4 }}
+              />
+              <TextWidget
+                text={snapshot.categoryLabel ?? ''}
+                style={{ color, fontSize: 12, fontWeight: '600', marginTop: 2 }}
+              />
+            </>
+          ) : null}
+          {showGlu ? (
+            <TextWidget
+              text={`GLU ${snapshot.glucoseMgdl} · ${snapshot.glucoseLabel ?? ''}`}
+              style={{ color: gluColor, fontSize: 14, fontWeight: '600', marginTop: 6 }}
+            />
+          ) : null}
           <TextWidget
             text="Tap to log →"
             style={{ color: '#8BA8C4', fontSize: 13, marginTop: 8 }}

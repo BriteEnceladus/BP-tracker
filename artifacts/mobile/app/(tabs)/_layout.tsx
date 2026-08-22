@@ -1,15 +1,21 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { enableFreeze } from 'react-native-screens';
 import { useColors } from '../../hooks/useColors';
+import { useGlucosePrefs } from '../../context/GlucosePrefsContext';
+
+enableFreeze(true);
 
 export default function TabLayout() {
   const colors = useColors();
+  const { tabVisible } = useGlucosePrefs();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        freezeOnBlur: true,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
@@ -43,6 +49,7 @@ export default function TabLayout() {
         name="glucose"
         options={{
           title: 'Glucose',
+          href: tabVisible ? undefined : null,
           tabBarIcon: ({ color, size }) => <Feather name="droplet" size={size} color={color} />,
         }}
       />

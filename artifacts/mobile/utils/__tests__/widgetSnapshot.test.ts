@@ -47,4 +47,18 @@ describe('buildWidgetSnapshot', () => {
     expect(snap).not.toHaveProperty('id');
     expect(snap).not.toHaveProperty('timestamp');
   });
+
+  it('adds a redacted glucose value without notes or timestamps', () => {
+    const snap = buildWidgetSnapshot({
+      enabled: true,
+      locked: false,
+      readings: sample,
+      glucose: [{ valueMgdl: 99, timestamp: '2026-08-19T09:00:00.000Z', notes: 'secret glu' } as never],
+    });
+    expect(snap.glucoseMgdl).toBe(99);
+    expect(snap.glucoseBand).toBe('inRange');
+    const json = JSON.stringify(snap);
+    expect(json).not.toMatch(/secret glu/);
+    expect(json).not.toMatch(/2026-08-19T09:00:00/);
+  });
 });

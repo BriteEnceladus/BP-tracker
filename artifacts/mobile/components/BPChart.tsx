@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-nati
 import Svg, { Line, Polyline, Circle } from 'react-native-svg';
 import { useColors } from '../hooks/useColors';
 import { BPReading } from '../src/db';
+import { downsampleEven } from '../utils/chartDownsample';
 
 interface BPChartProps {
   readings: BPReading[];
@@ -22,9 +23,11 @@ export function BPChart({ readings, height = 220, onPointPress }: BPChartProps) 
     );
   }
 
-  // Sort by timestamp ascending for chart
-  const sorted = [...readings].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  const sorted = downsampleEven(
+    [...readings].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    ),
+    48
   );
 
   const maxSys = Math.max(...sorted.map(r => r.systolic));

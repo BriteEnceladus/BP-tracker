@@ -4,6 +4,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BPProvider } from '../context/BPContext';
 import { MedsProvider } from '../context/MedsContext';
 import { GlucoseProvider } from '../context/GlucoseContext';
+import { GlucosePrefsProvider } from '../context/GlucosePrefsContext';
+import { TargetProvider } from '../context/TargetContext';
+import { WidgetSync } from '../components/WidgetSync';
 import { AiSettingsProvider } from '../context/AiSettingsContext';
 import { PremiumProvider } from '../context/PremiumContext';
 import { CryptoProvider, useCrypto } from '../context/CryptoContext';
@@ -56,11 +59,16 @@ function RootLayoutNav() {
         <BPProvider>
           <MedsProvider>
             <GlucoseProvider>
-              <Stack screenOptions={{ headerShown: false }}>
-                {showOnboarding && <Stack.Screen name="onboarding" />}
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="reading/[id]" />
-              </Stack>
+              <GlucosePrefsProvider>
+                <TargetProvider>
+                  <WidgetSync />
+                  <Stack screenOptions={{ headerShown: false }}>
+                    {showOnboarding && <Stack.Screen name="onboarding" />}
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="reading/[id]" />
+                  </Stack>
+                </TargetProvider>
+              </GlucosePrefsProvider>
             </GlucoseProvider>
           </MedsProvider>
         </BPProvider>

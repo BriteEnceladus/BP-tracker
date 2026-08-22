@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   Platform,
   ScrollView,
@@ -16,6 +16,8 @@ import { useBP } from "@/context/BPContext";
 import { useGlucose } from "@/context/GlucoseContext";
 import { useMeds } from "@/context/MedsContext";
 import { usePremium } from "@/context/PremiumContext";
+import { useGlucosePrefs } from "@/context/GlucosePrefsContext";
+import { GlucoseInsightCard } from "@/components/GlucoseInsightCard";
 import { BPCard } from "@/components/BPCard";
 import { GlucoseCard } from "@/components/GlucoseCard";
 import { BPChart } from "@/components/BPChart";
@@ -32,8 +34,8 @@ import { summarizeTimeOfDay } from "@/utils/timeOfDay";
 import { summarizeMedsVsBp } from "@/utils/medAdherence";
 import { setDailyReminderEnabled } from "@/utils/reminders";
 import { getGlucoseAverage, getGlucoseReadingsForDays, GLUCOSE_DISCLAIMER } from "@/utils/glucoseUtils";
-import { getGlucoseDisplayUnit } from "@/utils/glucoseUnit";
-import type { GlucoseDisplayUnit } from "@/src/schemas";
+import { generateGlucoseInsight } from "@/utils/glucoseInsights";
+import { useTarget } from "@/context/TargetContext";
 
 export default function DashboardScreen() {
   const colors = useColors();
@@ -42,11 +44,8 @@ export default function DashboardScreen() {
   const { glucose } = useGlucose();
   const { medications } = useMeds();
   const { isPremium, requirePro } = usePremium();
-  const [glucoseUnit, setGlucoseUnit] = useState<GlucoseDisplayUnit>('mg/dL');
-
-  useEffect(() => {
-    getGlucoseDisplayUnit().then(setGlucoseUnit);
-  }, []);
+  const { unit: glucoseUnit } = useGlucosePrefs();
+  const { target } = useTarget();
 
   const sortedReadings = useMemo(() => {
     return [...readings].sort(
@@ -58,6 +57,10 @@ export default function DashboardScreen() {
   const latestGlucose = glucose[0] ?? null;
   const glucose7d = useMemo(() => getGlucoseReadingsForDays(glucose, 7), [glucose]);
   const glucoseAvg7d = getGlucoseAverage(glucose7d);
+  const glucoseInsight = useMemo(
+    () => generateGlucoseInsight(glucose7d.length ? glucose7d : glucose.slice(0, 14), target.glucoseMgdl),
+    [glucose, glucose7d, target.glucoseMgdl]
+  );
 
   const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
   const averages = useMemo(() => getAverages(last7Days), [last7Days]);
@@ -197,7 +200,7 @@ export default function DashboardScreen() {
                 router.push({ pathname: "/(tabs)/log", params: { metric: "glucose", gid: String(latestGlucose.id) } })
               }
             >
-              <GlucoseCard reading={latestGlucose} unit={glucoseUnit} />
+              <GlucoseCard reading={latestGlucose} unit={glucoseUnit} targetMgdl={target.glucoseMgdl} />
             </TouchableOpacity>
           ) : (
             <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -221,6 +224,7 @@ export default function DashboardScreen() {
               Generic reference bands only.
             </Text>
           ) : null}
+          {glucoseInsight ? <GlucoseInsightCard card={glucoseInsight} /> : null}
         </View>
 
         {/* Stats - Bold data row */}

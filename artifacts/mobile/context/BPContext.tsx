@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
 import { Platform } from 'react-native';
@@ -13,8 +14,6 @@ import { useCrypto } from './CryptoContext';
 import { type SessionCryptoKey } from '../utils/readingEncryption';
 import { BPReadingInput } from '../src/schemas';
 import { runMigrationIfNeeded } from '../src/migration';
-import { buildWidgetSnapshot } from '../utils/widgetSnapshot';
-import { getWidgetEnabled, lockHomeWidget, publishWidgetSnapshot } from '../widget/bridge';
 
 interface BPContextType {
   readings: BPReading[];
@@ -89,78 +88,39 @@ export function BPProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh, isUnlocked, cryptoKey]);
 
-  useEffect(() => {
-    if (!isUnlocked) {
-      void lockHomeWidget();
-      return;
-    }
-    if (isLoading) return;
-    let cancelled = false;
-    (async () => {
-      const enabled = await getWidgetEnabled();
-      if (cancelled) return;
-      await publishWidgetSnapshot(
-        buildWidgetSnapshot({ enabled, locked: false, readings })
-      );
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isUnlocked, isLoading, readings]);
-
-  const addReading = async (readingData: BPReadingInput) => {
-    try {
+  const addReading = useCallback(
+    async (readingData: BPReadingInput) => {
       const key = getKey();
       await store.addReading(readingData, key);
-      if (Platform.OS !== 'web') {
-        await refresh();
-      }
-    } catch (error) {
-      console.error('Failed to add reading:', error);
-      throw error;
-    }
-  };
+      if (Platform.OS !== 'web') await refresh();
+    },
+    [getKey, refresh]
+  );
 
-  const updateReading = async (id: number, updates: Partial<BPReadingInput>) => {
-    try {
+  const updateReading = useCallback(
+    async (id: number, updates: Partial<BPReadingInput>) => {
       const key = getKey();
       await store.updateReading(id, updates, key);
-      if (Platform.OS !== 'web') {
-        await refresh();
-      }
-    } catch (error) {
-      console.error('Failed to update reading:', error);
-      throw error;
-    }
-  };
+      if (Platform.OS !== 'web') await refresh();
+    },
+    [getKey, refresh]
+  );
 
-  const deleteReading = async (id: number) => {
-    try {
+  const deleteReading = useCallback(
+    async (id: number) => {
       const key = getKey();
       await store.deleteReading(id, key);
-      if (Platform.OS !== 'web') {
-        await refresh();
-      }
-    } catch (error) {
-      console.error('Failed to delete reading:', error);
-      throw error;
-    }
-  };
-
-  return (
-    <BPContext.Provider
-      value={{
-        readings,
-        isLoading,
-        addReading,
-        updateReading,
-        deleteReading,
-        refresh,
-      }}
-    >
-      {children}
-    </BPContext.Provider>
+      if (Platform.OS !== 'web') await refresh();
+    },
+    [getKey, refresh]
   );
+
+  const value = useMemo(
+    () => ({ readings, isLoading, addReading, updateReading, deleteReading, refresh }),
+    [readings, isLoading, addReading, updateReading, deleteReading, refresh]
+  );
+
+  return <BPContext.Provider value={value}>{children}</BPContext.Provider>;
 }
 
 export function useBP() {

@@ -18,6 +18,8 @@ import { useMeds } from '../../context/MedsContext';
 import { useCrypto } from '../../context/CryptoContext';
 import { useAiSettings } from '../../context/AiSettingsContext';
 import { usePremium } from '../../context/PremiumContext';
+import { useGlucosePrefs } from '../../context/GlucosePrefsContext';
+import { useTarget } from '../../context/TargetContext';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { glucoseToCsv, readingsToCsv } from '../../utils/csvExport';
@@ -29,9 +31,8 @@ import { createEncryptedBackup, decryptBackup, isEncryptedBackupFile } from '../
 import { pickBackupFile, shareBackupFile } from '../../utils/backupShare';
 import { sharePdfReport } from '../../utils/pdfShare';
 import { isProtocolHidden, setProtocolHidden } from '../../utils/protocolHelper';
-import { getGlucoseDisplayUnit, setGlucoseDisplayUnit } from '../../utils/glucoseUnit';
-import type { GlucoseDisplayUnit } from '../../src/schemas';
 import { getGlucoseReadingsForDays } from '../../utils/glucoseUtils';
+import { parseGlucoseTargetMgdl } from '../../utils/targets';
 import { buildWidgetSnapshot } from '../../utils/widgetSnapshot';
 import {
   disableHomeWidget,
@@ -66,11 +67,13 @@ export default function SettingsScreen() {
   } = useCrypto();
   const { insightsEnabled, hasApiKey, setInsightsEnabled, saveApiKey, clearApiKey } = useAiSettings();
   const { isPremium, setMockPremium, restorePurchases, requirePro } = usePremium();
+  const { unit: glucoseUnit, setUnit: setGlucoseUnit, tabVisible, setTabVisible } = useGlucosePrefs();
+  const { target, saveTarget } = useTarget();
+  const [gluTargetDraft, setGluTargetDraft] = useState(String(target.glucoseMgdl));
   const [apiKeyDraft, setApiKeyDraft] = useState('');
   const [protocolHidden, setProtocolHiddenState] = useState(false);
   const [widgetEnabled, setWidgetEnabledState] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
-  const [glucoseUnit, setGlucoseUnitState] = useState<GlucoseDisplayUnit>('mg/dL');
   const [reminders, setReminders] = useState<ReminderSettings>({
     measurementEnabled: false,
     measurementHour: 8,
@@ -84,8 +87,11 @@ export default function SettingsScreen() {
     getReminderSettings().then(setReminders).catch(() => {});
     isProtocolHidden().then(setProtocolHiddenState).catch(() => {});
     getWidgetEnabled().then(setWidgetEnabledState).catch(() => setWidgetEnabledState(false));
-    getGlucoseDisplayUnit().then(setGlucoseUnitState).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setGluTargetDraft(String(target.glucoseMgdl));
+  }, [target.glucoseMgdl]);
 
   const toggleHomeWidget = (value: boolean) => {
     if (value && !isPremium) {
@@ -421,8 +427,8 @@ export default function SettingsScreen() {
         </View>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
           Pro, Android, opt-in. Requires a development client or EAS APK — not Expo Go. Latest SYS/DIA
-          can sit on the launcher unencrypted; notes never leave the vault. Locking the app clears the
-          numbers.
+          and glucose (mg/dL) can sit on the launcher unencrypted; notes never leave the vault.
+          Locking the app clears the numbers.
         </Text>
       </View>
 
@@ -450,9 +456,8 @@ export default function SettingsScreen() {
             {(['mg/dL', 'mmol/L'] as const).map((u) => (
               <TouchableOpacity
                 key={u}
-                onPress={async () => {
-                  await setGlucoseDisplayUnit(u);
-                  setGlucoseUnitState(u);
+                onPress={() => {
+                  setGlucoseUnit(u).catch(() => {});
                 }}
                 style={[
                   styles.chip,
@@ -471,6 +476,49 @@ export default function SettingsScreen() {
         </View>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
           Stored as mg/dL. This toggle only changes how numbers are shown. Not a medical device.
+        </Text>
+        <View style={styles.row}>
+          <Text style={{ color: colors.foreground, flex: 1, paddingRight: 12 }}>
+            Show Glucose tab
+          </Text>
+          <Switch
+            value={tabVisible}
+            onValueChange={(value) => {
+              setTabVisible(value).catch(() => {});
+            }}
+            trackColor={{ false: colors.border, true: colors.primary }}
+          />
+        </View>
+        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+          Turn off to keep a 5-tab bar. You can still log glucose from the Log screen switcher.
+        </Text>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+          <Text style={[styles.hint, { paddingHorizontal: 0, paddingBottom: 6 }]}>
+            Personal glucose target (below, mg/dL)
+          </Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, color: colors.foreground, borderColor: colors.border }]}
+            value={gluTargetDraft}
+            onChangeText={setGluTargetDraft}
+            keyboardType="numeric"
+            accessibilityLabel="Glucose personal target"
+          />
+          <TouchableOpacity
+            style={[styles.smallBtn, { backgroundColor: colors.primary, marginTop: 10, alignSelf: 'flex-start' }]}
+            onPress={async () => {
+              const parsed = parseGlucoseTargetMgdl(gluTargetDraft);
+              if (!parsed.ok) {
+                Alert.alert('Invalid target', parsed.error);
+                return;
+              }
+              await saveTarget({ ...target, glucoseMgdl: parsed.value });
+            }}
+          >
+            <Text style={{ color: colors.primaryForeground, fontWeight: '600' }}>Save glucose target</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+          Your own “below this” goal. Generic color bands stay educational and are not a diagnosis.
         </Text>
       </View>
 
