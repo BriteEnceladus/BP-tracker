@@ -65,6 +65,8 @@
   "dependencies": {
     "@react-native-community/datetimepicker": "^8.4.4",
     "dexie": "^4.4.3",
+    "expo-build-properties": "~1.0.10",
+    "expo-dev-client": "~6.0.21",
     "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.23",
     "expo-notifications": "~0.32.17",
