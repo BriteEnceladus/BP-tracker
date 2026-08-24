@@ -6,7 +6,7 @@ export const MGDL_PER_MMOL = 18.0182;
 export const GLUCOSE_DISCLAIMER =
   'This is not medical advice. Discuss readings with a qualified clinician. BP Tracker is not a medical device and does not diagnose.';
 
-export type GlucoseBand = 'low' | 'inRange' | 'elevated' | 'high';
+export type GlucoseBand = 'dangerLow' | 'low' | 'inRange' | 'elevated' | 'high' | 'dangerHigh';
 
 export const GLUCOSE_CONTEXTS: { id: GlucoseContextTag; label: string }[] = [
   { id: 'fasting', label: 'Fasting' },
@@ -37,22 +37,26 @@ export function parseDisplayInput(raw: string, unit: GlucoseDisplayUnit): number
 }
 
 /**
- * Generic reference bands in mg/dL for color only (not personal targets, not diagnosis).
- * Low < 70 · in-range 70–99 · elevated 100–125 · high ≥ 126
+ * Educational bands from common glucose charts (mg/dL), not a diagnosis.
+ * dangerLow ≤50 · low ≤70 · inRange ≤108 · elevated ≤180 · high ≤280 · dangerHigh >
  */
 export function getGlucoseBand(mgdl: number): GlucoseBand {
-  if (mgdl < 70) return 'low';
-  if (mgdl < 100) return 'inRange';
-  if (mgdl < 126) return 'elevated';
-  return 'high';
+  if (mgdl <= 50) return 'dangerLow';
+  if (mgdl <= 70) return 'low';
+  if (mgdl <= 108) return 'inRange';
+  if (mgdl <= 180) return 'elevated';
+  if (mgdl <= 280) return 'high';
+  return 'dangerHigh';
 }
 
 export function getGlucoseBandLabel(band: GlucoseBand): string {
   const labels: Record<GlucoseBand, string> = {
+    dangerLow: 'Danger low',
     low: 'Low',
-    inRange: 'In range',
-    elevated: 'Elevated',
+    inRange: 'Normal',
+    elevated: 'Borderline',
     high: 'High',
+    dangerHigh: 'Danger high',
   };
   return labels[band];
 }
@@ -62,13 +66,17 @@ export type GlucosePalette = {
   glucoseNormal: string;
   glucoseElevated: string;
   glucoseHigh: string;
+  glucoseDangerLow?: string;
+  glucoseDangerHigh?: string;
 };
 
 export function getGlucoseBandColor(band: GlucoseBand, colors: GlucosePalette): string {
+  if (band === 'dangerLow') return colors.glucoseDangerLow ?? colors.glucoseLow;
   if (band === 'low') return colors.glucoseLow;
   if (band === 'inRange') return colors.glucoseNormal;
   if (band === 'elevated') return colors.glucoseElevated;
-  return colors.glucoseHigh;
+  if (band === 'high') return colors.glucoseHigh;
+  return colors.glucoseDangerHigh ?? colors.glucoseHigh;
 }
 
 export function getGlucoseContextLabel(context: GlucoseContextTag): string {
