@@ -11,7 +11,13 @@ import {
 import { router } from 'expo-router';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
-import { usePremium, FREE_HISTORY_DAYS, canViewHistoryRange } from '../../context/PremiumContext';
+import {
+  usePremium,
+  FREE_HISTORY_DAYS,
+  canViewHistoryRange,
+  countWithinFreeWindow,
+  freeImportSummary,
+} from '../../context/PremiumContext';
 import { BPCard } from '../../components/BPCard';
 import { BPChart } from '../../components/BPChart';
 import { StatCard } from '../../components/StatCard';
@@ -107,7 +113,7 @@ export default function HistoryScreen() {
       }
       Alert.alert(
         'Import readings?',
-        `Add ${unique.length} reading(s)${errors.length ? `. ${errors.length} row(s) will be skipped.` : '.'}`,
+        `Add ${unique.length} reading(s)${errors.length ? `. ${errors.length} row(s) will be skipped.` : '.'} Older rows stay on this device even if you are on the free ${FREE_HISTORY_DAYS}-day view.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -117,7 +123,8 @@ export default function HistoryScreen() {
                 for (const reading of unique) {
                   await addReading(reading);
                 }
-                Alert.alert('Import complete', `Added ${unique.length} reading(s).`);
+                const { visible } = countWithinFreeWindow(unique.map((row) => row.timestamp));
+                Alert.alert('Import complete', freeImportSummary(unique.length, visible));
               } catch {
                 Alert.alert('Import failed', 'Some readings could not be saved.');
               }
