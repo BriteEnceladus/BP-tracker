@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -22,13 +22,27 @@ import { AiInsightModal } from '../../components/AiInsightModal';
 import { ProtocolHelper } from '../../components/ProtocolHelper';
 import { GlucoseLogForm } from '../../components/GlucoseLogForm';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { BPReadingInputSchema, parseWithSchema } from '../../src/schemas';
+import {
+  BPReadingInputSchema,
+  GlucoseReadingInputSchema,
+  parseWithSchema,
+  type GlucoseContextTag,
+} from '../../src/schemas';
 import { useGlucose } from '../../context/GlucoseContext';
+import { useGlucosePrefs } from '../../context/GlucosePrefsContext';
+import {
+  GLUCOSE_CONTEXTS,
+  getGlucoseBand,
+  getGlucoseBandColor,
+  getGlucoseBandLabel,
+  parseDisplayInput,
+} from '../../utils/glucoseUtils';
 
 export default function LogScreen() {
   const colors = useColors();
   const { readings, addReading, updateReading } = useBP();
-  const { glucose } = useGlucose();
+  const { glucose, addGlucose } = useGlucose();
+  const { unit } = useGlucosePrefs();
   const { insightsEnabled, hasApiKey, getApiKey } = useAiSettings();
   const [insightOpen, setInsightOpen] = useState(false);
   const [insightLoading, setInsightLoading] = useState(false);
@@ -49,6 +63,8 @@ export default function LogScreen() {
   const [systolic, setSystolic] = useState(editingReading?.systolic?.toString() || '');
   const [diastolic, setDiastolic] = useState(editingReading?.diastolic?.toString() || '');
   const [heartRate, setHeartRate] = useState(editingReading?.heartRate?.toString() || '');
+  const [glucoseValue, setGlucoseValue] = useState('');
+  const [glucoseContext, setGlucoseContext] = useState<GlucoseContextTag>('random');
   const [notes, setNotes] = useState(editingReading?.notes || '');
   const [medicationTaken, setMedicationTaken] = useState(editingReading?.medicationTaken || false);
   const [date, setDate] = useState(
@@ -70,6 +86,39 @@ export default function LogScreen() {
       color: getCategoryColor(key, colors),
     };
   }, [systolic, diastolic, colors]);
+
+  const liveGlucoseBand = useMemo(() => {
+    const mgdl = parseDisplayInput(glucoseValue, unit);
+    if (mgdl == null) return null;
+    const band = getGlucoseBand(mgdl);
+    return {
+      band,
+      color: getGlucoseBandColor(band, colors),
+      label: getGlucoseBandLabel(band),
+    };
+  }, [glucoseValue, unit, colors]);
+
+  const saveCompanionGlucose = async (timestamp: string) => {
+    const raw = glucoseValue.trim();
+    if (!raw) return;
+    const mgdl = parseDisplayInput(raw, unit);
+    if (mgdl == null) {
+      Alert.alert('Invalid glucose', `Enter a valid glucose value in ${unit}, or leave it blank.`);
+      throw new Error('invalid-glucose');
+    }
+    const parsed = parseWithSchema(GlucoseReadingInputSchema, {
+      timestamp,
+      valueMgdl: mgdl,
+      context: glucoseContext,
+      notes: notes.trim() || undefined,
+      medicationTaken,
+    });
+    if (!parsed.success) {
+      Alert.alert('Invalid glucose', parsed.errors.join('\n'));
+      throw new Error('invalid-glucose');
+    }
+    await addGlucose(parsed.data);
+  };
 
   const handleSave = async () => {
     const sysNum = parseInt(systolic, 10);
@@ -97,11 +146,13 @@ export default function LogScreen() {
     try {
       if (isEditing && editingReading?.id) {
         await updateReading(editingReading.id, readingData);
+        await saveCompanionGlucose(readingData.timestamp);
         router.back();
         return;
       }
 
       await addReading(readingData);
+      await saveCompanionGlucose(readingData.timestamp);
 
       if (insightsEnabled) {
         if (!hasApiKey) {
@@ -131,6 +182,7 @@ export default function LogScreen() {
 
       router.back();
     } catch (error) {
+      if (error instanceof Error && error.message === 'invalid-glucose') return;
       Alert.alert('Save Failed', 'Unable to save the reading. Please try again.');
     }
   };
@@ -269,6 +321,58 @@ export default function LogScreen() {
         </View>
 
         <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>
+            Glucose ({unit}) — optional
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              { backgroundColor: colors.card, color: colors.foreground, borderColor: colors.border },
+            ]}
+            value={glucoseValue}
+            onChangeText={setGlucoseValue}
+            keyboardType="decimal-pad"
+            placeholder={unit === 'mmol/L' ? '5.5' : '99'}
+            placeholderTextColor={colors.mutedForeground}
+          />
+          {liveGlucoseBand ? (
+            <View style={[styles.categoryPreview, { backgroundColor: liveGlucoseBand.color + '18', marginTop: 10, marginBottom: 0 }]}>
+              <Text style={[styles.categoryLabel, { color: liveGlucoseBand.color }]}>
+                {liveGlucoseBand.label}
+              </Text>
+            </View>
+          ) : null}
+          <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+            Leave blank to skip. Saved as its own encrypted glucose log, not on the BP record.
+          </Text>
+          <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 12 }]}>
+            Glucose category
+          </Text>
+          <View style={styles.chips}>
+            {GLUCOSE_CONTEXTS.map((c) => {
+              const on = glucoseContext === c.id;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  onPress={() => setGlucoseContext(c.id)}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: on ? colors.primary : colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: on ? colors.primaryForeground : colors.foreground, fontSize: 13 }}>
+                    {c.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: colors.mutedForeground }]}>Notes (optional)</Text>
           <TextInput
             style={[
@@ -361,6 +465,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     fontWeight: '500',
   },
+  hint: {
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 17,
+  },
   input: {
     borderWidth: 1,
     borderRadius: 12,
@@ -375,6 +484,17 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 90,
     textAlignVertical: 'top',
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   switchRow: {
     flexDirection: 'row',
