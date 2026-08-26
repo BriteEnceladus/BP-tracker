@@ -11,6 +11,7 @@ import {
 import { router } from 'expo-router';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
+import { usePremium, FREE_HISTORY_DAYS, canViewHistoryRange } from '../../context/PremiumContext';
 import { BPCard } from '../../components/BPCard';
 import { BPChart } from '../../components/BPChart';
 import { StatCard } from '../../components/StatCard';
@@ -23,10 +24,11 @@ import { BPReading } from '../../src/schemas';
 import { Feather } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
 
-type Range = 7 | 30 | 90 | 0;
+type Range = 7 | 14 | 30 | 90 | 0;
 
 const ranges: { label: string; value: Range }[] = [
   { label: '7d', value: 7 },
+  { label: '14d', value: 14 },
   { label: '30d', value: 30 },
   { label: '90d', value: 90 },
   { label: 'All', value: 0 },
@@ -35,11 +37,30 @@ const ranges: { label: string; value: Range }[] = [
 export default function HistoryScreen() {
   const colors = useColors();
   const { readings, isLoading, deleteReading, addReading } = useBP();
-  const [range, setRange] = useState<Range>(30);
+  const { isPremium, requirePro } = usePremium();
+  const [range, setRange] = useState<Range>(FREE_HISTORY_DAYS as Range);
   const [recentlyDeleted, setRecentlyDeleted] = useState<BPReading | null>(null);
   const [undoTimeout, setUndoTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  const filteredReadings = useMemo(() => getReadingsForDays(readings, range), [readings, range]);
+  const effectiveRange: Range = canViewHistoryRange(isPremium, range)
+    ? range
+    : (FREE_HISTORY_DAYS as Range);
+  const filteredReadings = useMemo(
+    () => getReadingsForDays(readings, effectiveRange),
+    [readings, effectiveRange]
+  );
+  const hiddenCount = useMemo(() => {
+    if (isPremium) return 0;
+    return Math.max(0, readings.length - filteredReadings.length);
+  }, [isPremium, readings.length, filteredReadings.length]);
+
+  const setRangeOrPaywall = (value: Range) => {
+    if (!canViewHistoryRange(isPremium, value)) {
+      requirePro('fullHistory');
+      return;
+    }
+    setRange(value);
+  };
 
   const sortedReadings = useMemo(
     () =>
@@ -197,32 +218,41 @@ export default function HistoryScreen() {
         </View>
       </View>
 
-      {/* Filter chips */}
       <View style={styles.filterRow}>
-        {ranges.map((r) => (
-          <TouchableOpacity
-            key={r.value}
-            style={[
-              styles.filterChip,
-              {
-                backgroundColor: range === r.value ? colors.primary : colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-            onPress={() => setRange(r.value)}
-          >
-            <Text
-              style={{
-                color: range === r.value ? colors.primaryForeground : colors.foreground,
-                fontSize: 13,
-                fontWeight: range === r.value ? '600' : '400',
-              }}
+        {ranges.map((r) => {
+          const locked = !canViewHistoryRange(isPremium, r.value);
+          const selected = effectiveRange === r.value;
+          return (
+            <TouchableOpacity
+              key={r.value}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: selected ? colors.primary : colors.card,
+                  borderColor: colors.border,
+                  opacity: locked ? 0.7 : 1,
+                },
+              ]}
+              onPress={() => setRangeOrPaywall(r.value)}
             >
-              {r.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={{
+                  color: selected ? colors.primaryForeground : colors.foreground,
+                  fontSize: 13,
+                  fontWeight: selected ? '600' : '400',
+                }}
+              >
+                {locked ? `${r.label} \u00b7 Pro` : r.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
+      {!isPremium ? (
+        <Text style={{ color: colors.mutedForeground, fontSize: 12, paddingHorizontal: 16, paddingBottom: 8 }}>
+          Showing the last {FREE_HISTORY_DAYS} days. {hiddenCount > 0 ? `${hiddenCount} older reading(s) stay encrypted on this device` : 'Older logs stay on this device'} and unlock with Pro. Nothing is deleted if Pro turns off.
+        </Text>
+      ) : null}
 
       {sortedReadings.length === 0 ? (
         <View style={styles.empty}>
@@ -240,7 +270,6 @@ export default function HistoryScreen() {
           keyExtractor={(item) => item.id?.toString() || item.timestamp}
           ListHeaderComponent={
             <View style={{ marginBottom: 16 }}>
-              {/* Bold analytics chart */}
               {sortedReadings.length > 1 && (
                 <View style={{ marginBottom: 16 }}>
                   <BPChart
@@ -252,8 +281,6 @@ export default function HistoryScreen() {
                   />
                 </View>
               )}
-
-              {/* Stats summary for bold feel */}
               <View style={styles.statsRow}>
                 <StatCard label="Avg Sys" value={averages.avgSystolic || '--'} unit="mmHg" accent={avgCategoryColor} />
                 <StatCard label="Avg Dia" value={averages.avgDiastolic || '--'} unit="mmHg" accent={avgCategoryColor} />
@@ -280,7 +307,6 @@ export default function HistoryScreen() {
         />
       )}
 
-      {/* Undo Banner */}
       {recentlyDeleted && (
         <View style={[styles.undoBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={{ color: colors.foreground, flex: 1 }}>Reading deleted</Text>
