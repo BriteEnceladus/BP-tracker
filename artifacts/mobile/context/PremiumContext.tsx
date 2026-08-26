@@ -13,10 +13,20 @@ const PREMIUM_KEY = 'bp_premium_status';
 
 /**
  * Pro feature flags — single source of truth for gating.
- * Free users keep: logging, last 30 days history, local insights, basic CSV export of visible data, meds, encryption.
+ * Free users keep: logging, last 14 days visible history, local insights, basic CSV export of visible data, meds, encryption.
+ * Older logs stay encrypted on device and reappear when Pro is active. Toggling Pro never deletes readings.
  */
+/** Free users can VIEW this many days. Stored logs are never pruned. */
+export const FREE_HISTORY_DAYS = 14;
+
+export function canViewHistoryRange(isPremium: boolean, days: number): boolean {
+  if (isPremium) return true;
+  if (days === 0) return false;
+  return days <= FREE_HISTORY_DAYS;
+}
+
 export const PRO_FEATURES = {
-  fullHistory: 'Full history (beyond 30 days)',
+  fullHistory: 'Full history (beyond 14 days)',
   csvImport: 'CSV import',
   encryptedBackup: 'Encrypted backup',
   encryptedRestore: 'Restore encrypted backup',
@@ -123,7 +133,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
 
       Alert.alert(
         'BP Tracker Pro',
-        `${label} is available with Pro.\n\nPro unlocks full history, import, encrypted backup/restore, PDF reports, and reminders.\n\nLocal insights stay free on this device.`,
+        `${label} is available with Pro.\n\nPro unlocks full history from your first log, import, encrypted backup/restore, PDF reports, and reminders.\n\nYour older logs stay on this device even if Pro is off. Local insights stay free.`,
         [
           { text: 'Not now', style: 'cancel' },
           { text: 'See Pro', onPress: () => purchase() },

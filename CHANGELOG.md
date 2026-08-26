@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-- Glucose module (encrypted, canonical mg/dL). Dedicated tab + Log switcher. Free: 30-day history. Pro: 90d/All, CSV import, backup/PDF inclusion, glucose reminders. Educational range bands only — not diagnostic.
+- Glucose module (encrypted, canonical mg/dL). Dedicated tab + Log switcher. Free: 14-day visible history. Pro: 30d/90d/All, CSV import, backup/PDF inclusion, glucose reminders. Educational range bands only — not diagnostic.
+- Free history cap is view-only (14 days for BP and glucose). Logs are never pruned. Subscribing reveals full history from the first log; toggling Pro off hides older rows but does not delete them.
 - Glucose follow-ups: personal below-target (mg/dL), on-device insight cards, Home Screen widget glucose line (Pro, lock-wipe), optional hide Glucose tab. Chart downsample + frozen inactive tabs.
 - Measurement protocol helper on Log (Free): sit, feet flat, rest ~5 min, cuff at heart. Dismiss for the session or “don’t show again” (AsyncStorage preference only). Re-enable in Settings → Logging.
-- Time-of-day averages on Dashboard (Free, last 30 days, local clock). Pro adds per-bucket counts and the peak window. Fully on-device.
+- Time-of-day averages on Dashboard (Free, last 14 days, local clock). Pro adds per-bucket counts and the peak window. Fully on-device.
 - Meds vs BP: local averages for readings marked taken vs not (need ≥3 in each group). Basic text is Free; two-bar systolic chart is Pro.
 - Year-in-review clinician PDF (Pro): monthly averages, category counts, active meds, 30-day appendix. Optional streak/target if provided. Notes omitted. Not a medical device.
 - Android Home Screen widget (Pro, opt-in): latest SYS/DIA + category + tap to log. Redacted snapshot (no notes/ids/timestamps). Clears on lock. Needs a dev client or EAS build — not Expo Go.
