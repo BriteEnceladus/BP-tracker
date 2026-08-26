@@ -15,7 +15,7 @@ import { useColors } from "@/hooks/useColors";
 import { useBP } from "@/context/BPContext";
 import { useGlucose } from "@/context/GlucoseContext";
 import { useMeds } from "@/context/MedsContext";
-import { usePremium } from "@/context/PremiumContext";
+import { usePremium, FREE_HISTORY_DAYS } from "@/context/PremiumContext";
 import { useGlucosePrefs } from "@/context/GlucosePrefsContext";
 import { GlucoseInsightCard } from "@/components/GlucoseInsightCard";
 import { BPCard } from "@/components/BPCard";
@@ -65,7 +65,7 @@ export default function DashboardScreen() {
   const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
   const averages = useMemo(() => getAverages(last7Days), [last7Days]);
   const timeOfDayWindow = useMemo(
-    () => getReadingsForDays(readings, isPremium ? 0 : 30),
+    () => getReadingsForDays(readings, isPremium ? 0 : FREE_HISTORY_DAYS),
     [readings, isPremium]
   );
   const timeOfDay = useMemo(
@@ -119,7 +119,6 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View
         style={[
           styles.header,
@@ -158,7 +157,6 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Trend Alert */}
         {trendAlert && (
           <View style={[styles.alert, { backgroundColor: colors.crisis + "20", borderColor: colors.crisis }]}>
             <Feather name="trending-up" size={18} color={colors.crisis} />
@@ -166,7 +164,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Latest Reading - Bold focus */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Latest Reading</Text>
           {latest ? (
@@ -227,7 +224,6 @@ export default function DashboardScreen() {
           {glucoseInsight ? <GlucoseInsightCard card={glucoseInsight} /> : null}
         </View>
 
-        {/* Stats - Bold data row */}
         {timeOfDayWindow.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
@@ -240,7 +236,7 @@ export default function DashboardScreen() {
             />
             <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: 8 }}>
               Averages use your local clock
-              {isPremium ? '' : ' (last 30 days)'}. Nothing is sent to a server.
+              {isPremium ? '' : ` (last ${FREE_HISTORY_DAYS} days)`}. Nothing is sent to a server.
             </Text>
           </View>
         )}
@@ -283,7 +279,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Chart - more prominent */}
         {last7Days.length > 1 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Trend (Last 7 Days)</Text>
@@ -299,7 +294,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Recent Readings */}
         {recentReadings.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
