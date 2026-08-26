@@ -300,7 +300,12 @@ export default function HistoryScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <Swipeable renderRightActions={() => renderRightActions(item)}>
+            <Swipeable
+              friction={2}
+              overshootRight={false}
+              overshootFriction={8}
+              renderRightActions={() => renderRightActions(item)}
+            >
               <TouchableOpacity
                 onPress={() => item.id && router.push(`/reading/${item.id}`)}
               >
@@ -310,11 +315,12 @@ export default function HistoryScreen() {
           )}
           contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
           showsVerticalScrollIndicator={false}
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          windowSize={5}
           removeClippedSubviews
           updateCellsBatchingPeriod={50}
+          scrollEventThrottle={16}
         />
       )}
 
