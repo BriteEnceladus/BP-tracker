@@ -36,6 +36,7 @@ import { setDailyReminderEnabled } from "@/utils/reminders";
 import { getGlucoseAverage, getGlucoseReadingsForDays, GLUCOSE_DISCLAIMER } from "@/utils/glucoseUtils";
 import { generateGlucoseInsight } from "@/utils/glucoseInsights";
 import { useTarget } from "@/context/TargetContext";
+import { ScreenEnter } from "@/components/motion";
 
 export default function DashboardScreen() {
   const colors = useColors();
@@ -170,20 +171,26 @@ export default function DashboardScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        scrollEventThrottle={16}
       >
         {trendAlert && (
-          <View style={[styles.alert, { backgroundColor: colors.crisis + "20", borderColor: colors.crisis }]}>
-            <Feather name="trending-up" size={18} color={colors.crisis} />
-            <Text style={[styles.alertText, { color: colors.foreground }]}>{trendAlert}</Text>
-          </View>
+          <ScreenEnter>
+            <View style={[styles.alert, { backgroundColor: colors.crisis + "20", borderColor: colors.crisis }]}>
+              <Feather name="trending-up" size={18} color={colors.crisis} />
+              <Text style={[styles.alertText, { color: colors.foreground }]}>{trendAlert}</Text>
+            </View>
+          </ScreenEnter>
         )}
 
         {!isPremium && hiddenOlderCount > 0 ? (
-          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginHorizontal: 20, marginTop: 12 }}>
-            Charts and recents use the last {FREE_HISTORY_DAYS} days. {hiddenOlderCount} older log(s) stay encrypted on this device and unlock with Pro.
-          </Text>
+          <ScreenEnter delay={40}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 12, marginHorizontal: 20, marginTop: 12 }}>
+              Charts and recents use the last {FREE_HISTORY_DAYS} days. {hiddenOlderCount} older log(s) stay encrypted on this device and unlock with Pro.
+            </Text>
+          </ScreenEnter>
         ) : null}
 
+        <ScreenEnter delay={80}>
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Latest Reading</Text>
           {latest ? (
@@ -201,7 +208,9 @@ export default function DashboardScreen() {
             </View>
           )}
         </View>
+        </ScreenEnter>
 
+        <ScreenEnter delay={120}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
@@ -243,8 +252,10 @@ export default function DashboardScreen() {
           ) : null}
           {glucoseInsight ? <GlucoseInsightCard card={glucoseInsight} /> : null}
         </View>
+        </ScreenEnter>
 
         {timeOfDayWindow.length > 0 && (
+          <ScreenEnter delay={160}>
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
               Time of day
@@ -259,9 +270,11 @@ export default function DashboardScreen() {
               {isPremium ? '' : ` (last ${FREE_HISTORY_DAYS} days)`}. Nothing is sent to a server.
             </Text>
           </View>
+          </ScreenEnter>
         )}
 
         {(activeMedCount > 0 || medsVsBp.taken.count > 0) && (
+          <ScreenEnter delay={200}>
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
               Meds vs BP
@@ -273,9 +286,11 @@ export default function DashboardScreen() {
               onPressPro={() => requirePro('medsCorrelation')}
             />
           </View>
+          </ScreenEnter>
         )}
 
         {last7Days.length > 0 && (
+          <ScreenEnter delay={240}>
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Last 7 Days</Text>
             <View style={styles.statsRow}>
@@ -297,9 +312,11 @@ export default function DashboardScreen() {
               />
             </View>
           </View>
+          </ScreenEnter>
         )}
 
         {last7Days.length > 1 && (
+          <ScreenEnter delay={280}>
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Trend (Last 7 Days)</Text>
             <BPChart 
@@ -312,9 +329,11 @@ export default function DashboardScreen() {
               }} 
             />
           </View>
+          </ScreenEnter>
         )}
 
         {recentReadings.length > 0 && (
+          <ScreenEnter delay={320}>
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>Recent Readings</Text>
@@ -335,9 +354,11 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          </ScreenEnter>
         )}
 
         {readings.length === 0 && (
+          <ScreenEnter delay={80}>
           <View style={styles.emptyState}>
             <Feather name="activity" size={48} color={colors.mutedForeground} />
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
@@ -347,6 +368,7 @@ export default function DashboardScreen() {
               Log your first blood pressure reading to see insights here.
             </Text>
           </View>
+          </ScreenEnter>
         )}
       </ScrollView>
     </View>
