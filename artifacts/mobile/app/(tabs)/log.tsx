@@ -32,6 +32,7 @@ import { useGlucose } from '../../context/GlucoseContext';
 import { useGlucosePrefs } from '../../context/GlucosePrefsContext';
 import {
   GLUCOSE_CONTEXTS,
+  GLUCOSE_DISCLAIMER,
   getGlucoseBand,
   getGlucoseBandColor,
   getGlucoseBandLabel,
@@ -98,13 +99,15 @@ export default function LogScreen() {
     };
   }, [glucoseValue, unit, colors]);
 
-  const saveCompanionGlucose = async (timestamp: string) => {
+  const parseCompanionGlucose = (timestamp: string) => {
     const raw = glucoseValue.trim();
-    if (!raw) return;
+    if (!raw) return { kind: 'skip' as const };
     const mgdl = parseDisplayInput(raw, unit);
     if (mgdl == null) {
-      Alert.alert('Invalid glucose', `Enter a valid glucose value in ${unit}, or leave it blank.`);
-      throw new Error('invalid-glucose');
+      return {
+        kind: 'error' as const,
+        message: `Enter a valid glucose value in ${unit}, or leave it blank.`,
+      };
     }
     const parsed = parseWithSchema(GlucoseReadingInputSchema, {
       timestamp,
@@ -114,19 +117,25 @@ export default function LogScreen() {
       medicationTaken,
     });
     if (!parsed.success) {
-      Alert.alert('Invalid glucose', parsed.errors.join('\n'));
-      throw new Error('invalid-glucose');
+      return { kind: 'error' as const, message: parsed.errors.join('\n') };
     }
-    await addGlucose(parsed.data);
+    return { kind: 'ok' as const, data: parsed.data };
   };
 
   const handleSave = async () => {
     const sysNum = parseInt(systolic, 10);
     const diaNum = parseInt(diastolic, 10);
     const hrNum = heartRate ? parseInt(heartRate, 10) : undefined;
+    const timestamp = date.toISOString();
+    const companion = parseCompanionGlucose(timestamp);
+
+    if (companion.kind === 'error') {
+      Alert.alert('Invalid glucose', companion.message);
+      return;
+    }
 
     const input = {
-      timestamp: date.toISOString(),
+      timestamp,
       systolic: sysNum,
       diastolic: diaNum,
       heartRate: hrNum,
@@ -146,13 +155,13 @@ export default function LogScreen() {
     try {
       if (isEditing && editingReading?.id) {
         await updateReading(editingReading.id, readingData);
-        await saveCompanionGlucose(readingData.timestamp);
+        if (companion.kind === 'ok') await addGlucose(companion.data);
         router.back();
         return;
       }
 
       await addReading(readingData);
-      await saveCompanionGlucose(readingData.timestamp);
+      if (companion.kind === 'ok') await addGlucose(companion.data);
 
       if (insightsEnabled) {
         if (!hasApiKey) {
@@ -181,8 +190,7 @@ export default function LogScreen() {
       }
 
       router.back();
-    } catch (error) {
-      if (error instanceof Error && error.message === 'invalid-glucose') return;
+    } catch {
       Alert.alert('Save Failed', 'Unable to save the reading. Please try again.');
     }
   };
@@ -345,31 +353,36 @@ export default function LogScreen() {
           <Text style={[styles.hint, { color: colors.mutedForeground }]}>
             Leave blank to skip. Saved as its own encrypted glucose log, not on the BP record.
           </Text>
-          <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 12 }]}>
-            Glucose category
-          </Text>
-          <View style={styles.chips}>
-            {GLUCOSE_CONTEXTS.map((c) => {
-              const on = glucoseContext === c.id;
-              return (
-                <TouchableOpacity
-                  key={c.id}
-                  onPress={() => setGlucoseContext(c.id)}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: on ? colors.primary : colors.card,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  <Text style={{ color: on ? colors.primaryForeground : colors.foreground, fontSize: 13 }}>
-                    {c.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {glucoseValue.trim() ? (
+            <>
+              <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 12 }]}>
+                Glucose category
+              </Text>
+              <View style={styles.chips}>
+                {GLUCOSE_CONTEXTS.map((c) => {
+                  const on = glucoseContext === c.id;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => setGlucoseContext(c.id)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: on ? colors.primary : colors.card,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                    >
+                      <Text style={{ color: on ? colors.primaryForeground : colors.foreground, fontSize: 13 }}>
+                        {c.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={[styles.hint, { color: colors.mutedForeground }]}>{GLUCOSE_DISCLAIMER}</Text>
+            </>
+          ) : null}
         </View>
 
         <View style={styles.inputGroup}>
