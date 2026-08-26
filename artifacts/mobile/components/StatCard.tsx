@@ -9,7 +9,7 @@ interface StatCardProps {
   accent?: string;
 }
 
-export function StatCard({ label, value, unit, accent }: StatCardProps) {
+export const StatCard = React.memo(function StatCard({ label, value, unit, accent }: StatCardProps) {
   const colors = useColors();
 
   return (
@@ -21,7 +21,7 @@ export function StatCard({ label, value, unit, accent }: StatCardProps) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

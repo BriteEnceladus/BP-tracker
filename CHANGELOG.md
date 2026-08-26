@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Motion pass on the development/preview build: Reanimated enter/press/pulse tokens, OS Reduce Motion respected, shorter fade navigation, lock-screen pulse paused while authenticating, tighter list windows + swipe damping, memoized BP chart.
 - Glucose module (encrypted, canonical mg/dL). Dedicated tab + Log switcher. Free: 14-day visible history. Pro: 30d/90d/All, backup/PDF inclusion, glucose reminders. CSV import stores all rows on device. Educational range bands only — not diagnostic.
 - Free history cap is view-only (14 days for BP and glucose). Logs are never pruned. Subscribing reveals full history from the first log; toggling Pro off hides older rows but does not delete them.
 - CSV import (History, Glucose, Settings) stores every valid row for free users. Older-than-14-day rows stay encrypted on device and only appear in lists/export with Pro. Success copy reports how many are visible vs stored. Dashboard recent list, glucose log recents, glucose insights, and Meds vs BP use the same 14-day view window. Pro sees full history from the first log.
