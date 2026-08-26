@@ -13,7 +13,8 @@ import { CryptoProvider, useCrypto } from '../context/CryptoContext';
 import { LockScreen } from '../components/LockScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
+import { MOTION } from '../utils/motion';
 
 const ONBOARDING_COMPLETE_KEY = 'onboardingComplete';
 
@@ -62,10 +63,20 @@ function RootLayoutNav() {
               <GlucosePrefsProvider>
                 <TargetProvider>
                   <WidgetSync />
-                  <Stack screenOptions={{ headerShown: false }}>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      animation: Platform.OS === 'web' ? 'none' : 'fade',
+                      animationDuration: MOTION.stack,
+                      contentStyle: { backgroundColor: '#0A1628' },
+                    }}
+                  >
                     {showOnboarding && <Stack.Screen name="onboarding" />}
                     <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="reading/[id]" />
+                    <Stack.Screen
+                      name="reading/[id]"
+                      options={{ animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade' }}
+                    />
                   </Stack>
                 </TargetProvider>
               </GlucosePrefsProvider>

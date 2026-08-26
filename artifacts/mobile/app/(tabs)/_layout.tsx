@@ -16,8 +16,11 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         freezeOnBlur: true,
+        lazy: true,
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
+        sceneContainerStyle: { backgroundColor: colors.background },
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
