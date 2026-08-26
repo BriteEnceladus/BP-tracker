@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-- Glucose module (encrypted, canonical mg/dL). Dedicated tab + Log switcher. Free: 14-day visible history. Pro: 30d/90d/All, CSV import, backup/PDF inclusion, glucose reminders. Educational range bands only — not diagnostic.
+- Glucose module (encrypted, canonical mg/dL). Dedicated tab + Log switcher. Free: 14-day visible history. Pro: 30d/90d/All, backup/PDF inclusion, glucose reminders. CSV import stores all rows on device. Educational range bands only — not diagnostic.
 - Free history cap is view-only (14 days for BP and glucose). Logs are never pruned. Subscribing reveals full history from the first log; toggling Pro off hides older rows but does not delete them.
+- CSV import (History, Glucose, Settings) stores every valid row for free users. Older-than-14-day rows stay encrypted on device and only appear in lists/export with Pro. Success copy reports how many are visible vs stored. Dashboard recent list and glucose insight cards use the same 14-day view window.
 - Glucose follow-ups: personal below-target (mg/dL), on-device insight cards, Home Screen widget glucose line (Pro, lock-wipe), optional hide Glucose tab. Chart downsample + frozen inactive tabs.
 - Measurement protocol helper on Log (Free): sit, feet flat, rest ~5 min, cuff at heart. Dismiss for the session or “don’t show again” (AsyncStorage preference only). Re-enable in Settings → Logging.
 - Time-of-day averages on Dashboard (Free, last 14 days, local clock). Pro adds per-bucket counts and the peak window. Fully on-device.
