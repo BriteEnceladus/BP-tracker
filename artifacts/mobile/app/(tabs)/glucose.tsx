@@ -6,7 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useColors } from '../../hooks/useColors';
 import { useGlucose } from '../../context/GlucoseContext';
-import { usePremium, FREE_HISTORY_DAYS, canViewHistoryRange } from '../../context/PremiumContext';
+import {
+  usePremium,
+  FREE_HISTORY_DAYS,
+  canViewHistoryRange,
+  countWithinFreeWindow,
+  freeImportSummary,
+} from '../../context/PremiumContext';
 import { useGlucosePrefs } from '../../context/GlucosePrefsContext';
 import { useTarget } from '../../context/TargetContext';
 import { GlucoseCard } from '../../components/GlucoseCard';
@@ -55,8 +61,8 @@ export default function GlucoseHistoryScreen() {
   );
   const avg = getGlucoseAverage(filtered);
   const insightCard = useMemo(
-    () => generateGlucoseInsight(filtered.length ? filtered : glucose, target.glucoseMgdl),
-    [filtered, glucose, target.glucoseMgdl]
+    () => generateGlucoseInsight(filtered, target.glucoseMgdl),
+    [filtered, target.glucoseMgdl]
   );
   const deleteRow = useCallback(
     (id: number) => {
@@ -91,10 +97,6 @@ export default function GlucoseHistoryScreen() {
   };
 
   const importCsv = async () => {
-    if (!isPremium) {
-      requirePro('csvImport');
-      return;
-    }
     try {
       const raw = await pickTextFile();
       const { readings: incoming, errors } = parseCsvGlucose(raw);
@@ -103,16 +105,25 @@ export default function GlucoseHistoryScreen() {
         Alert.alert('Import failed', errors[0] || 'No valid glucose rows found.');
         return;
       }
-      Alert.alert('Import glucose?', `Add ${unique.length} reading(s).`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Import',
-          onPress: async () => {
-            for (const row of unique) await addGlucose(row);
-            Alert.alert('Import complete', `Added ${unique.length} glucose reading(s).`);
+      if (unique.length === 0) {
+        Alert.alert('Nothing new', `All ${incoming.length} reading(s) are already in Glucose.`);
+        return;
+      }
+      Alert.alert(
+        'Import glucose?',
+        `Add ${unique.length} reading(s)${errors.length ? `. ${errors.length} row(s) will be skipped.` : '.'} Older rows stay on this device even if you are on the free ${FREE_HISTORY_DAYS}-day view.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Import',
+            onPress: async () => {
+              for (const row of unique) await addGlucose(row);
+              const { visible } = countWithinFreeWindow(unique.map((row) => row.timestamp));
+              Alert.alert('Import complete', freeImportSummary(unique.length, visible));
+            },
           },
-        },
-      ]);
+        ]
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       if (message !== 'No file selected') {
@@ -181,7 +192,7 @@ export default function GlucoseHistoryScreen() {
                   fontWeight: effectiveRange === r.value ? '600' : '400',
                 }}
               >
-                {locked ? `${r.label} · Pro` : r.label}
+                {locked ? `${r.label} \u00b7 Pro` : r.label}
               </Text>
             </TouchableOpacity>
           );
