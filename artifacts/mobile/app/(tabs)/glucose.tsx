@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useColors } from '../../hooks/useColors';
 import { useGlucose } from '../../context/GlucoseContext';
-import { usePremium } from '../../context/PremiumContext';
+import { usePremium, FREE_HISTORY_DAYS, canViewHistoryRange } from '../../context/PremiumContext';
 import { useGlucosePrefs } from '../../context/GlucosePrefsContext';
 import { useTarget } from '../../context/TargetContext';
 import { GlucoseCard } from '../../components/GlucoseCard';
@@ -26,9 +26,10 @@ import { shareCsvFile } from '../../utils/csvShare';
 import { isDuplicateGlucose, parseCsvGlucose } from '../../utils/csvImport';
 import { pickTextFile } from '../../utils/filePick';
 
-type Range = 7 | 30 | 90 | 0;
+type Range = 7 | 14 | 30 | 90 | 0;
 const ranges: { label: string; value: Range }[] = [
   { label: '7d', value: 7 },
+  { label: '14d', value: 14 },
   { label: '30d', value: 30 },
   { label: '90d', value: 90 },
   { label: 'All', value: 0 },
@@ -41,9 +42,9 @@ export default function GlucoseHistoryScreen() {
   const { isPremium, requirePro } = usePremium();
   const { unit } = useGlucosePrefs();
   const { target } = useTarget();
-  const [range, setRange] = useState<Range>(30);
+  const [range, setRange] = useState<Range>(FREE_HISTORY_DAYS as Range);
 
-  const effectiveRange: Range = isPremium || (range !== 0 && range <= 30) ? range : 30;
+  const effectiveRange: Range = canViewHistoryRange(isPremium, range) ? range : (FREE_HISTORY_DAYS as Range);
   const filtered = useMemo(
     () => getGlucoseReadingsForDays(glucose, effectiveRange),
     [glucose, effectiveRange]
@@ -64,8 +65,10 @@ export default function GlucoseHistoryScreen() {
     [deleteGlucose]
   );
 
+  const hiddenCount = isPremium ? 0 : Math.max(0, glucose.length - filtered.length);
+
   const setRangeOrPaywall = (value: Range) => {
-    if ((value === 90 || value === 0) && !isPremium) {
+    if (!canViewHistoryRange(isPremium, value)) {
       requirePro('fullHistory');
       return;
     }
@@ -157,7 +160,7 @@ export default function GlucoseHistoryScreen() {
 
       <View style={styles.filterRow}>
         {ranges.map((r) => {
-          const locked = !isPremium && (r.value === 90 || r.value === 0);
+          const locked = !canViewHistoryRange(isPremium, r.value);
           return (
             <TouchableOpacity
               key={r.value}
@@ -184,6 +187,11 @@ export default function GlucoseHistoryScreen() {
           );
         })}
       </View>
+      {!isPremium ? (
+        <Text style={{ color: colors.mutedForeground, fontSize: 12, paddingHorizontal: 16, paddingBottom: 8 }}>
+          Showing the last {FREE_HISTORY_DAYS} days. {hiddenCount > 0 ? `${hiddenCount} older reading(s) stay encrypted on this device` : 'Older logs stay on this device'} and unlock with Pro. Nothing is deleted if Pro turns off.
+        </Text>
+      ) : null}
 
       {isLoading ? (
         <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 40 }}>Loading…</Text>
