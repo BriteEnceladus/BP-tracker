@@ -25,6 +25,36 @@ export function canViewHistoryRange(isPremium: boolean, days: number): boolean {
   return days <= FREE_HISTORY_DAYS;
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** How many timestamps fall inside the free view window. Import still stores every row. */
+export function countWithinFreeWindow(
+  timestamps: string[],
+  nowMs: number = Date.now()
+): { visible: number; hidden: number } {
+  const cutoff = nowMs - FREE_HISTORY_DAYS * MS_PER_DAY;
+  let visible = 0;
+  for (const ts of timestamps) {
+    const t = new Date(ts).getTime();
+    if (!Number.isNaN(t) && t >= cutoff) visible += 1;
+  }
+  return { visible, hidden: Math.max(0, timestamps.length - visible) };
+}
+
+/** Alert copy after CSV import. Older rows stay on device; they are not deleted. */
+export function freeImportSummary(importedCount: number, visibleCount: number, noun = 'reading'): string {
+  const hidden = Math.max(0, importedCount - visibleCount);
+  const plural = importedCount === 1 ? noun : `${noun}s`;
+  if (importedCount <= 0) return `No new ${plural} added.`;
+  if (hidden <= 0) {
+    return `Added ${importedCount} ${plural}.`;
+  }
+  return (
+    `Added ${importedCount} ${plural}. ${visibleCount} ${visibleCount === 1 ? 'is' : 'are'} in your last ${FREE_HISTORY_DAYS} days. ` +
+    `${hidden} older ${hidden === 1 ? `${noun} stays` : `${noun}s stay`} encrypted on this device and appear with Pro. Nothing was deleted.`
+  );
+}
+
 export const PRO_FEATURES = {
   fullHistory: 'Full history (beyond 14 days)',
   csvImport: 'CSV import',
