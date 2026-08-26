@@ -6,6 +6,7 @@ import { getBPCategory, getCategoryColor, getCategoryLabel } from '../utils/bpUt
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AGE_KEY = 'bp_user_age';
+let ageCache: number | null | undefined;
 
 interface BPCardProps {
   reading: BPReading;
@@ -13,15 +14,22 @@ interface BPCardProps {
 
 function BPCardInner({ reading }: BPCardProps) {
   const colors = useColors();
-  const [age, setAge] = useState<number | null>(null);
+  const [age, setAge] = useState<number | null>(ageCache ?? null);
 
   useEffect(() => {
+    if (ageCache !== undefined) {
+      setAge(ageCache);
+      return;
+    }
     AsyncStorage.getItem(AGE_KEY)
       .then((v) => {
         const n = v ? parseInt(v, 10) : NaN;
-        setAge(Number.isFinite(n) ? n : null);
+        ageCache = Number.isFinite(n) ? n : null;
+        setAge(ageCache);
       })
-      .catch(() => {});
+      .catch(() => {
+        ageCache = null;
+      });
   }, []);
 
   const categoryKey = getBPCategory(reading.systolic, reading.diastolic, age);
