@@ -4,6 +4,12 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "npx expo export -p web",
   "outputDirectory": "dist",
+  "github": {
+    "enabled": false
+  },
+  "git": {
+    "deploymentEnabled": false
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]

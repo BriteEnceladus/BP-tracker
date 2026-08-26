@@ -4,6 +4,12 @@
   "installCommand": "corepack enable pnpm && cd artifacts/mobile && pnpm install --frozen-lockfile",
   "buildCommand": "cd artifacts/mobile && npx expo export -p web",
   "outputDirectory": "artifacts/mobile/dist",
+  "github": {
+    "enabled": false
+  },
+  "git": {
+    "deploymentEnabled": false
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
