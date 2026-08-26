@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import { useColors } from '../hooks/useColors';
 import { useGlucose } from '../context/GlucoseContext';
 import { useGlucosePrefs } from '../context/GlucosePrefsContext';
+import { usePremium, FREE_HISTORY_DAYS } from '../context/PremiumContext';
 import { useTarget } from '../context/TargetContext';
 import { isGlucoseInTarget } from '../utils/targets';
 import { GlucoseReadingInputSchema, parseWithSchema, type GlucoseContextTag, type GlucoseReading } from '../src/schemas';
@@ -24,13 +25,27 @@ import {
   getGlucoseBand,
   getGlucoseBandColor,
   getGlucoseBandLabel,
+  getGlucoseReadingsForDays,
   parseDisplayInput,
 } from '../utils/glucoseUtils';
 export function GlucoseLogForm({ editing }: { editing: GlucoseReading | null }) {
   const colors = useColors();
-  const { addGlucose, updateGlucose } = useGlucose();
+  const { glucose, addGlucose, updateGlucose } = useGlucose();
+  const { isPremium } = usePremium();
   const { unit } = useGlucosePrefs();
   const { target } = useTarget();
+  const visibleWindow = useMemo(
+    () => getGlucoseReadingsForDays(glucose, isPremium ? 0 : FREE_HISTORY_DAYS),
+    [glucose, isPremium]
+  );
+  const recentVisible = useMemo(
+    () =>
+      [...visibleWindow]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 5),
+    [visibleWindow]
+  );
+  const hiddenCount = isPremium ? 0 : Math.max(0, glucose.length - visibleWindow.length);
   const [value, setValue] = useState(
     editing ? formatGlucoseValue(editing.valueMgdl, unit) : ''
   );
@@ -52,7 +67,7 @@ export function GlucoseLogForm({ editing }: { editing: GlucoseReading | null }) 
     return {
       band,
       color: getGlucoseBandColor(band, colors),
-      label: `${getGlucoseBandLabel(band)}${inTarget ? ' · Below your target' : ' · Above your target'}`,
+      label: `${getGlucoseBandLabel(band)}${inTarget ? ' \u00b7 Below your target' : ' \u00b7 Above your target'}`,
     };
   }, [value, unit, colors, target]);
 
@@ -189,6 +204,38 @@ export function GlucoseLogForm({ editing }: { editing: GlucoseReading | null }) 
           {editing ? 'Update glucose' : 'Save glucose'}
         </Text>
       </TouchableOpacity>
+
+      {recentVisible.length > 0 ? (
+        <View style={{ marginTop: 24 }}>
+          <Text style={[styles.label, { color: colors.foreground }]}>
+            {isPremium ? 'Recent glucose' : `Last ${FREE_HISTORY_DAYS} days`}
+          </Text>
+          {!isPremium ? (
+            <Text style={[styles.hint, { color: colors.mutedForeground, marginBottom: 8 }]}>
+              {hiddenCount > 0
+                ? `${hiddenCount} older reading(s) stay encrypted on this device and unlock with Pro.`
+                : `Older logs stay on this device. Pro shows full history.`}
+            </Text>
+          ) : null}
+          {recentVisible.map((row) => (
+            <TouchableOpacity
+              key={row.id ?? row.timestamp}
+              onPress={() =>
+                row.id != null &&
+                router.push({ pathname: '/(tabs)/log', params: { metric: 'glucose', gid: String(row.id) } })
+              }
+              style={[styles.recentRow, { borderColor: colors.border, backgroundColor: colors.card }]}
+            >
+              <Text style={{ color: colors.foreground, fontWeight: '600' }}>
+                {formatGlucoseValue(row.valueMgdl, unit)} {unit}
+              </Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                {new Date(row.timestamp).toLocaleString()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -225,4 +272,15 @@ const styles = StyleSheet.create({
   },
   save: { padding: 18, borderRadius: 14, alignItems: 'center' },
   saveText: { fontSize: 17, fontWeight: '600' },
+  recentRow: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
 });
