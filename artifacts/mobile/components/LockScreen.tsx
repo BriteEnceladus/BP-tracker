@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useCrypto } from '@/context/CryptoContext';
 import { getPasswordStrength } from '@/utils/crypto';
+import { PulseScale } from '@/components/motion';
 
 type Mode = 'setup' | 'biometric' | 'password';
 
@@ -68,21 +68,7 @@ export function LockScreen() {
   const [bioError, setBioError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [bioLoading, setBioLoading] = useState(false);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const didAutoTrigger = useRef(false);
-
-  // Subtle pulse for biometric button
-  useEffect(() => {
-    if (mode !== 'biometric') return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.08, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [mode, pulseAnim]);
 
   useEffect(() => {
     if (mode !== 'biometric' || didAutoTrigger.current) return;
@@ -192,28 +178,29 @@ export function LockScreen() {
             activeOpacity={0.8}
             style={styles.biometricBtnWrap}
           >
-            <Animated.View
-              style={[
-                styles.biometricRing,
-                {
-                  borderColor: bioLoading ? colors.mutedForeground : colors.primary,
-                  transform: [{ scale: pulseAnim }],
-                },
-              ]}
-            >
+            <PulseScale active={!bioLoading}>
               <View
                 style={[
-                  styles.biometricInner,
-                  { backgroundColor: bioLoading ? colors.border : colors.primary + '22' },
+                  styles.biometricRing,
+                  {
+                    borderColor: bioLoading ? colors.mutedForeground : colors.primary,
+                  },
                 ]}
               >
-                {bioLoading ? (
-                  <ActivityIndicator size="large" color={colors.primary} />
-                ) : (
-                  <Feather name="smartphone" size={48} color={colors.primary} />
-                )}
+                <View
+                  style={[
+                    styles.biometricInner,
+                    { backgroundColor: bioLoading ? colors.border : colors.primary + '22' },
+                  ]}
+                >
+                  {bioLoading ? (
+                    <ActivityIndicator size="large" color={colors.primary} />
+                  ) : (
+                    <Feather name="smartphone" size={48} color={colors.primary} />
+                  )}
+                </View>
               </View>
-            </Animated.View>
+            </PulseScale>
           </TouchableOpacity>
 
           <Text style={[styles.bioLabel, { color: colors.foreground }]}>
