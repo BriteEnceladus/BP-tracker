@@ -53,20 +53,34 @@ export default function DashboardScreen() {
     );
   }, [readings]);
 
+  const visibleReadings = useMemo(
+    () => (isPremium ? sortedReadings : getReadingsForDays(sortedReadings, FREE_HISTORY_DAYS)),
+    [sortedReadings, isPremium]
+  );
+  const visibleGlucose = useMemo(
+    () => (isPremium ? glucose : getGlucoseReadingsForDays(glucose, FREE_HISTORY_DAYS)),
+    [glucose, isPremium]
+  );
+  const hiddenOlderCount = isPremium
+    ? 0
+    : Math.max(0, readings.length - visibleReadings.length) +
+      Math.max(0, glucose.length - visibleGlucose.length);
+
+  // Latest single reading stays visible even if it is older than the free window.
   const latest = sortedReadings[0] ?? null;
   const latestGlucose = glucose[0] ?? null;
-  const glucose7d = useMemo(() => getGlucoseReadingsForDays(glucose, 7), [glucose]);
+  const glucose7d = useMemo(() => getGlucoseReadingsForDays(visibleGlucose, 7), [visibleGlucose]);
   const glucoseAvg7d = getGlucoseAverage(glucose7d);
   const glucoseInsight = useMemo(
-    () => generateGlucoseInsight(glucose7d.length ? glucose7d : glucose.slice(0, 14), target.glucoseMgdl),
-    [glucose, glucose7d, target.glucoseMgdl]
+    () => generateGlucoseInsight(glucose7d.length ? glucose7d : visibleGlucose, target.glucoseMgdl),
+    [visibleGlucose, glucose7d, target.glucoseMgdl]
   );
 
-  const last7Days = useMemo(() => getReadingsForDays(readings, 7), [readings]);
+  const last7Days = useMemo(() => getReadingsForDays(visibleReadings, 7), [visibleReadings]);
   const averages = useMemo(() => getAverages(last7Days), [last7Days]);
   const timeOfDayWindow = useMemo(
-    () => getReadingsForDays(readings, isPremium ? 0 : FREE_HISTORY_DAYS),
-    [readings, isPremium]
+    () => (isPremium ? getReadingsForDays(readings, 0) : visibleReadings),
+    [readings, visibleReadings, isPremium]
   );
   const timeOfDay = useMemo(
     () => summarizeTimeOfDay(timeOfDayWindow),
@@ -79,11 +93,11 @@ export default function DashboardScreen() {
     return getCategoryColor(getBPCategory(averages.avgSystolic, averages.avgDiastolic), colors);
   }, [averages, colors]);
 
-  const recentReadings = sortedReadings.slice(0, 5);
+  const recentReadings = visibleReadings.slice(0, 5);
 
   const trendAlert = useMemo(() => {
-    if (sortedReadings.length < 3) return null;
-    const recent = sortedReadings.slice(0, 3).reverse();
+    if (visibleReadings.length < 3) return null;
+    const recent = visibleReadings.slice(0, 3).reverse();
     const sysTrend = recent[2].systolic - recent[0].systolic;
     const diaTrend = recent[2].diastolic - recent[0].diastolic;
 
@@ -91,7 +105,7 @@ export default function DashboardScreen() {
       return "Readings trending upward. Consider consulting your doctor.";
     }
     return null;
-  }, [sortedReadings]);
+  }, [visibleReadings]);
 
   const webTopPadding = Platform.OS === "web" ? 67 : 0;
 
@@ -163,6 +177,12 @@ export default function DashboardScreen() {
             <Text style={[styles.alertText, { color: colors.foreground }]}>{trendAlert}</Text>
           </View>
         )}
+
+        {!isPremium && hiddenOlderCount > 0 ? (
+          <Text style={{ color: colors.mutedForeground, fontSize: 12, marginHorizontal: 20, marginTop: 12 }}>
+            Charts and recents use the last {FREE_HISTORY_DAYS} days. {hiddenOlderCount} older log(s) stay encrypted on this device and unlock with Pro.
+          </Text>
+        ) : null}
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Latest Reading</Text>

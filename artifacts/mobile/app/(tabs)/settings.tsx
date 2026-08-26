@@ -17,7 +17,12 @@ import { useGlucose } from '../../context/GlucoseContext';
 import { useMeds } from '../../context/MedsContext';
 import { useCrypto } from '../../context/CryptoContext';
 import { useAiSettings } from '../../context/AiSettingsContext';
-import { usePremium, FREE_HISTORY_DAYS } from '../../context/PremiumContext';
+import {
+  usePremium,
+  FREE_HISTORY_DAYS,
+  countWithinFreeWindow,
+  freeImportSummary,
+} from '../../context/PremiumContext';
 import { useGlucosePrefs } from '../../context/GlucosePrefsContext';
 import { useTarget } from '../../context/TargetContext';
 import { Feather } from '@expo/vector-icons';
@@ -199,7 +204,7 @@ export default function SettingsScreen() {
       }
       Alert.alert(
         'Import readings?',
-        `Add ${unique.length} reading(s)${incoming.length !== unique.length ? ` (${incoming.length - unique.length} duplicate(s) skipped)` : ''}${errors.length ? `. ${errors.length} row(s) had errors and will be skipped.` : '.'}`,
+        `Add ${unique.length} reading(s)${incoming.length !== unique.length ? ` (${incoming.length - unique.length} duplicate(s) skipped)` : ''}${errors.length ? `. ${errors.length} row(s) had errors and will be skipped.` : '.'} Older rows stay on this device even if you are on the free ${FREE_HISTORY_DAYS}-day view.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -210,7 +215,8 @@ export default function SettingsScreen() {
                   await addReading(reading);
                 }
                 await refresh();
-                Alert.alert('Import complete', `Added ${unique.length} reading(s).`);
+                const { visible } = countWithinFreeWindow(unique.map((row) => row.timestamp));
+                Alert.alert('Import complete', freeImportSummary(unique.length, visible));
               } catch {
                 Alert.alert('Import failed', 'Some readings could not be saved.');
               }
@@ -683,7 +689,7 @@ export default function SettingsScreen() {
           <Feather name="upload" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          CSV and PDF are plaintext. Encrypted backup is the private option. Treat exported files as sensitive.
+          Free CSV export is the last {FREE_HISTORY_DAYS} days. Import stores every valid row; older logs stay encrypted and appear with Pro. CSV and PDF are plaintext. Encrypted backup is the private option.
         </Text>
         <TouchableOpacity style={styles.row} onPress={clearAllData}>
           <Text style={{ color: colors.crisis }}>Clear All Data</Text>

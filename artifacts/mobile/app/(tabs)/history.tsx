@@ -268,7 +268,11 @@ export default function HistoryScreen() {
             No readings in this period
           </Text>
           <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 6 }}>
-            Try a wider range, or log a reading to start your history.
+            {isPremium
+              ? 'Try a wider range, or log a reading to start your history.'
+              : hiddenCount > 0
+                ? `Older logs stay encrypted on this device. Pro unlocks history beyond ${FREE_HISTORY_DAYS} days.`
+                : 'Log a reading to start your history.'}
           </Text>
         </View>
       ) : (
