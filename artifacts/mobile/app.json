@@ -112,6 +112,18 @@
               "resizeMode": "horizontal|vertical",
               "previewImage": "./assets/widget-preview/latest-reading.png",
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "QuickLog",
+              "label": "Quick Log",
+              "description": "Open BP Tracker to log a reading now. No numbers on the home screen.",
+              "minWidth": "110dp",
+              "minHeight": "40dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 1,
+              "resizeMode": "none",
+              "previewImage": "./assets/widget-preview/latest-reading.png",
+              "updatePeriodMillis": 86400000
             }
           ]
         }

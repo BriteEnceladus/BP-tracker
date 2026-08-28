@@ -79,7 +79,7 @@ export function LatestReadingWidget({ snapshot }: { snapshot: WidgetSnapshot }) 
             />
           ) : null}
           <TextWidget
-            text="Tap to log →"
+            text="Tap to log now"
             style={{ color: '#8BA8C4', fontSize: 13, marginTop: 8 }}
           />
         </>
@@ -90,7 +90,7 @@ export function LatestReadingWidget({ snapshot }: { snapshot: WidgetSnapshot }) 
             style={{ color: '#E2EAF0', fontSize: 16, fontWeight: '600', marginTop: 8 }}
           />
           <TextWidget
-            text="Tap to log →"
+            text="Tap to log now"
             style={{ color: '#8BA8C4', fontSize: 13, marginTop: 6 }}
           />
         </>

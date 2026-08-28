@@ -160,7 +160,7 @@ export default function GlucoseHistoryScreen() {
             <Feather name="upload" size={18} color={colors.foreground} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.push({ pathname: '/(tabs)/log', params: { metric: 'glucose' } })}
+            onPress={() => router.push({ pathname: '/log', params: { metric: 'glucose' } })}
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
           >
             <Feather name="plus" size={18} color={colors.primaryForeground} />
@@ -216,7 +216,7 @@ export default function GlucoseHistoryScreen() {
             Values stay on this device, encrypted. Restore from Settings if you have a backup.
           </Text>
           <TouchableOpacity
-            onPress={() => router.push({ pathname: '/(tabs)/log', params: { metric: 'glucose' } })}
+            onPress={() => router.push({ pathname: '/log', params: { metric: 'glucose' } })}
           >
             <Text style={{ color: colors.primary, fontWeight: '600', marginTop: 12 }}>Log glucose →</Text>
           </TouchableOpacity>
@@ -249,7 +249,7 @@ export default function GlucoseHistoryScreen() {
               <TouchableOpacity
                 onPress={() =>
                   item.id != null &&
-                  router.push({ pathname: '/(tabs)/log', params: { metric: 'glucose', gid: String(item.id) } })
+                  router.push({ pathname: '/log', params: { metric: 'glucose', gid: String(item.id) } })
                 }
               >
                 <GlucoseCard reading={item} unit={unit} targetMgdl={target.glucoseMgdl} />

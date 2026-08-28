@@ -161,7 +161,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push("/(tabs)/log")}
+            onPress={() => router.push("/log")}
           >
             <Feather name="plus" size={22} color={colors.primaryForeground} />
           </TouchableOpacity>
@@ -202,7 +202,7 @@ export default function DashboardScreen() {
               <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 6 }}>
                 Sit quietly for 5 minutes, then log systolic, diastolic, and pulse.
               </Text>
-              <TouchableOpacity onPress={() => router.push("/(tabs)/log")}>
+              <TouchableOpacity onPress={() => router.push("/log")}>
                 <Text style={{ color: colors.primary, marginTop: 10, fontWeight: '600' }}>Log your first reading →</Text>
               </TouchableOpacity>
             </View>
@@ -223,7 +223,7 @@ export default function DashboardScreen() {
           {latestGlucose ? (
             <TouchableOpacity
               onPress={() =>
-                router.push({ pathname: "/(tabs)/log", params: { metric: "glucose", gid: String(latestGlucose.id) } })
+                router.push({ pathname: "/log", params: { metric: "glucose", gid: String(latestGlucose.id) } })
               }
             >
               <GlucoseCard reading={latestGlucose} unit={glucoseUnit} targetMgdl={target.glucoseMgdl} />
@@ -238,7 +238,7 @@ export default function DashboardScreen() {
                 {GLUCOSE_DISCLAIMER}
               </Text>
               <TouchableOpacity
-                onPress={() => router.push({ pathname: "/(tabs)/log", params: { metric: "glucose" } })}
+                onPress={() => router.push({ pathname: "/log", params: { metric: "glucose" } })}
               >
                 <Text style={{ color: colors.primary, marginTop: 10, fontWeight: "600" }}>Log glucose →</Text>
               </TouchableOpacity>
@@ -346,7 +346,7 @@ export default function DashboardScreen() {
               <TouchableOpacity
                 key={reading.id || reading.timestamp}
                 onPress={() => router.push({
-                  pathname: "/(tabs)/log",
+                  pathname: "/log",
                   params: { id: reading.id?.toString() }
                 })}
               >

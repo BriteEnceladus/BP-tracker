@@ -436,7 +436,8 @@ export default function SettingsScreen() {
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
           Pro, Android, opt-in. Requires a development client or EAS APK — not Expo Go. Latest SYS/DIA
           and glucose (mg/dL) can sit on the launcher unencrypted; notes never leave the vault.
-          Locking the app clears the numbers.
+          Locking the app clears the numbers. Tap the widget (or the small Quick Log tile) to open
+          the in-app Log form — not to type on the home screen.
         </Text>
       </View>
 

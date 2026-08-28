@@ -38,6 +38,7 @@ export default function TabLayout() {
         name="log"
         options={{
           title: 'Log',
+          href: null,
           tabBarIcon: ({ color, size }) => <Feather name="plus-circle" size={size} color={color} />,
         }}
       />

@@ -54,7 +54,7 @@ export default function ReadingDetailScreen() {
 
   const handleEdit = () => {
     router.push({
-      pathname: '/(tabs)/log',
+      pathname: '/log',
       params: { id: readingId.toString() },
     });
   };

@@ -222,7 +222,7 @@ export function GlucoseLogForm({ editing }: { editing: GlucoseReading | null }) 
               key={row.id ?? row.timestamp}
               onPress={() =>
                 row.id != null &&
-                router.push({ pathname: '/(tabs)/log', params: { metric: 'glucose', gid: String(row.id) } })
+                router.push({ pathname: '/log', params: { metric: 'glucose', gid: String(row.id) } })
               }
               style={[styles.recentRow, { borderColor: colors.border, backgroundColor: colors.card }]}
             >

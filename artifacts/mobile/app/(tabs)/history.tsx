@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../../hooks/useColors';
 import { useBP } from '../../context/BPContext';
 import {
@@ -42,6 +43,7 @@ const ranges: { label: string; value: Range }[] = [
 
 export default function HistoryScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { readings, isLoading, deleteReading, addReading } = useBP();
   const { isPremium, requirePro } = usePremium();
   const [range, setRange] = useState<Range>(FREE_HISTORY_DAYS as Range);
@@ -213,14 +215,22 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>History</Text>
-        <View style={{ flexDirection: 'row', gap: 16 }}>
-          <TouchableOpacity onPress={importFromCsv} accessibilityLabel="Import CSV">
-            <Feather name="upload" size={24} color={colors.primary} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity onPress={importFromCsv} accessibilityLabel="Import CSV" hitSlop={8}>
+            <Feather name="upload" size={22} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={exportToCSV} accessibilityLabel="Export CSV">
-            <Feather name="download" size={24} color={colors.primary} />
+          <TouchableOpacity onPress={exportToCSV} accessibilityLabel="Export CSV" hitSlop={8}>
+            <Feather name="download" size={22} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/log')}
+            accessibilityLabel="Log new reading"
+            style={[styles.logBtn, { backgroundColor: colors.primary }]}
+          >
+            <Feather name="plus-circle" size={18} color={colors.primaryForeground} />
+            <Text style={[styles.logBtnText, { color: colors.primaryForeground }]}>Log</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -274,6 +284,13 @@ export default function HistoryScreen() {
                 ? `Older logs stay encrypted on this device. Pro unlocks history beyond ${FREE_HISTORY_DAYS} days.`
                 : 'Log a reading to start your history.'}
           </Text>
+          <TouchableOpacity
+            onPress={() => router.push('/log')}
+            accessibilityLabel="Log new reading"
+            style={[styles.emptyLogBtn, { backgroundColor: colors.primary }]}
+          >
+            <Text style={{ color: colors.primaryForeground, fontWeight: '600' }}>Log reading</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -347,6 +364,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
+  },
+  logBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  logBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptyLogBtn: {
+    marginTop: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
   },
   title: {
     fontSize: 28,
