@@ -13,7 +13,11 @@ import { Platform } from 'react-native';
 const ENABLED_KEY = 'bp_ai_insights_opt_in';
 const API_KEY_STORE = 'bp_xai_api_key';
 
+/** Parked. Flip to true to restore Settings toggle + post-log Grok card. */
+export const AI_INSIGHTS_AVAILABLE = false;
+
 interface AiSettingsContextType {
+  insightsAvailable: boolean;
   insightsEnabled: boolean;
   hasApiKey: boolean;
   isReady: boolean;
@@ -50,13 +54,25 @@ export function AiSettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     Promise.all([AsyncStorage.getItem(ENABLED_KEY), readSecret(API_KEY_STORE)])
       .then(([enabled, key]) => {
-        setEnabledState(enabled === '1');
+        if (!AI_INSIGHTS_AVAILABLE) {
+          setEnabledState(false);
+          if (enabled === '1') {
+            void AsyncStorage.setItem(ENABLED_KEY, '0');
+          }
+        } else {
+          setEnabledState(enabled === '1');
+        }
         setHasApiKey(!!key);
       })
       .finally(() => setIsReady(true));
   }, []);
 
   const setInsightsEnabled = useCallback(async (enabled: boolean) => {
+    if (!AI_INSIGHTS_AVAILABLE) {
+      await AsyncStorage.setItem(ENABLED_KEY, '0');
+      setEnabledState(false);
+      return;
+    }
     await AsyncStorage.setItem(ENABLED_KEY, enabled ? '1' : '0');
     setEnabledState(enabled);
   }, []);
@@ -82,7 +98,8 @@ export function AiSettingsProvider({ children }: { children: ReactNode }) {
   return (
     <AiSettingsContext.Provider
       value={{
-        insightsEnabled,
+        insightsAvailable: AI_INSIGHTS_AVAILABLE,
+        insightsEnabled: AI_INSIGHTS_AVAILABLE && insightsEnabled,
         hasApiKey,
         isReady,
         setInsightsEnabled,
