@@ -17,6 +17,7 @@ import { useGlucosePrefs } from '../context/GlucosePrefsContext';
 import { usePremium, FREE_HISTORY_DAYS } from '../context/PremiumContext';
 import { useTarget } from '../context/TargetContext';
 import { isGlucoseInTarget } from '../utils/targets';
+import { PressScale } from './motion';
 import { GlucoseReadingInputSchema, parseWithSchema, type GlucoseContextTag, type GlucoseReading } from '../src/schemas';
 import {
   GLUCOSE_CONTEXTS,
@@ -199,11 +200,15 @@ export function GlucoseLogForm({ editing }: { editing: GlucoseReading | null }) 
         />
       </View>
 
-      <TouchableOpacity style={[styles.save, { backgroundColor: colors.primary }]} onPress={handleSave}>
+      <PressScale
+        style={[styles.save, { backgroundColor: colors.primary }]}
+        onPress={handleSave}
+        accessibilityLabel={editing ? 'Update glucose' : 'Save glucose'}
+      >
         <Text style={[styles.saveText, { color: colors.primaryForeground }]}>
           {editing ? 'Update glucose' : 'Save glucose'}
         </Text>
-      </TouchableOpacity>
+      </PressScale>
 
       {recentVisible.length > 0 ? (
         <View style={{ marginTop: 24 }}>

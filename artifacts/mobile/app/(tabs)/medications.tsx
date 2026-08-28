@@ -5,7 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  FlatList,
   Alert,
   Switch,
   Modal,
@@ -22,6 +22,7 @@ import { MedsVsBpCard } from '../../components/MedsVsBpCard';
 import { summarizeMedsVsBp } from '../../utils/medAdherence';
 import { getReadingsForDays } from '../../utils/bpUtils';
 import { Medication, MedicationInput, parseWithSchema, MedicationInputSchema } from '../../src/schemas';
+import { PressScale, ScreenEnter } from '../../components/motion';
 
 export default function MedicationsScreen() {
   const colors = useColors();
@@ -119,84 +120,110 @@ export default function MedicationsScreen() {
     );
   };
 
-  const activeMeds = medications.filter((m) => m.active);
-  const inactiveMeds = medications.filter((m) => !m.active);
+  const { activeMeds, medRows } = useMemo(() => {
+    const active = medications.filter((m) => m.active);
+    const inactive = medications.filter((m) => !m.active);
+    const rows: Array<
+      | { id: string; kind: 'section'; title: string }
+      | { id: string; kind: 'med'; med: Medication }
+    > = [];
+    if (active.length > 0) {
+      rows.push({ id: 'section-active', kind: 'section', title: 'Active' });
+      for (const med of active) {
+        rows.push({ id: `med-${med.id ?? med.name}`, kind: 'med', med });
+      }
+    }
+    if (inactive.length > 0) {
+      rows.push({ id: 'section-inactive', kind: 'section', title: 'Inactive' });
+      for (const med of inactive) {
+        rows.push({ id: `med-${med.id ?? med.name}-inactive`, kind: 'med', med });
+      }
+    }
+    return { activeMeds: active, medRows: rows };
+  }, [medications]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Medications</Text>
-        <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: colors.primary }]}
-          onPress={openAdd}
-          activeOpacity={0.85}
-        >
-          <Feather name="plus" size={20} color={colors.primaryForeground || '#fff'} />
-          <Text style={[styles.addBtnText, { color: colors.primaryForeground || '#fff' }]}>Add</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenEnter>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.foreground }]}>Medications</Text>
+          <PressScale
+            style={[styles.addBtn, { backgroundColor: colors.primary }]}
+            onPress={openAdd}
+            accessibilityLabel="Add medication"
+          >
+            <Feather name="plus" size={20} color={colors.primaryForeground || '#fff'} />
+            <Text style={[styles.addBtnText, { color: colors.primaryForeground || '#fff' }]}>Add</Text>
+          </PressScale>
+        </View>
+        <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
+          For personal tracking only. Not medical advice. Always follow your clinician’s instructions.
+        </Text>
+      </ScreenEnter>
 
-      <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
-        For personal tracking only. Not medical advice. Always follow your clinician’s instructions.
-      </Text>
-
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        {readings.length > 0 ? (
-          <View style={{ marginBottom: 16 }}>
-            <MedsVsBpCard
-              summary={medsVsBp}
-              isPremium={isPremium}
-              activeMedCount={activeMeds.length}
-              onPressPro={() => requirePro('medsCorrelation')}
-            />
-          </View>
-        ) : null}
-        {isLoading ? (
-          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 40 }}>
-            Loading…
-          </Text>
-        ) : medications.length === 0 ? (
-          <View style={styles.empty}>
-            <Feather name="package" size={40} color={colors.mutedForeground} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No medications yet</Text>
-            <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-              Tap Add to record a medication you take.
-            </Text>
-          </View>
-        ) : (
-          <>
-            {activeMeds.length > 0 && (
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Active</Text>
-            )}
-            {activeMeds.map((med) => (
-              <MedCard
-                key={med.id}
-                med={med}
-                colors={colors}
-                onEdit={() => openEdit(med)}
-                onToggle={() => med.id != null && toggleActive(med.id)}
-                onDelete={() => confirmDelete(med)}
-              />
-            ))}
-
-            {inactiveMeds.length > 0 && (
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground, marginTop: 20 }]}>
-                Inactive
+      <FlatList
+        data={isLoading || medications.length === 0 ? [] : medRows}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => {
+          if (item.kind === 'section') {
+            return (
+              <Text
+                style={[
+                  styles.sectionLabel,
+                  { color: colors.mutedForeground, marginTop: item.title === 'Inactive' ? 20 : 0 },
+                ]}
+              >
+                {item.title}
               </Text>
-            )}
-            {inactiveMeds.map((med) => (
-              <MedCard
-                key={med.id}
-                med={med}
-                colors={colors}
-                onEdit={() => openEdit(med)}
-                onToggle={() => med.id != null && toggleActive(med.id)}
-                onDelete={() => confirmDelete(med)}
-              />
-            ))}
-          </>
-        )}
-      </ScrollView>
+            );
+          }
+          return (
+            <MedCard
+              med={item.med}
+              colors={colors}
+              onEdit={() => openEdit(item.med)}
+              onToggle={() => item.med.id != null && toggleActive(item.med.id)}
+              onDelete={() => confirmDelete(item.med)}
+            />
+          );
+        }}
+        ListHeaderComponent={
+          readings.length > 0 ? (
+            <ScreenEnter delay={40}>
+              <View style={{ marginBottom: 16 }}>
+                <MedsVsBpCard
+                  summary={medsVsBp}
+                  isPremium={isPremium}
+                  activeMedCount={activeMeds.length}
+                  onPressPro={() => requirePro('medsCorrelation')}
+                />
+              </View>
+            </ScreenEnter>
+          ) : null
+        }
+        ListEmptyComponent={
+          isLoading ? (
+            <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 40 }}>
+              Loading…
+            </Text>
+          ) : (
+            <View style={styles.empty}>
+              <Feather name="package" size={40} color={colors.mutedForeground} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No medications yet</Text>
+              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+                Tap Add to record a medication you take.
+              </Text>
+            </View>
+          )
+        }
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews
+        scrollEventThrottle={16}
+      />
 
       {/* Add / Edit Modal — real inputs */}
       <Modal visible={modalVisible} animationType="slide" transparent>
@@ -276,15 +303,16 @@ export default function MedicationsScreen() {
               >
                 <Text style={{ color: colors.mutedForeground }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              <PressScale
                 style={[styles.saveBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}
                 onPress={handleSave}
                 disabled={saving}
+                accessibilityLabel={editing ? 'Update medication' : 'Save medication'}
               >
                 <Text style={{ color: colors.primaryForeground || '#fff', fontWeight: '600' }}>
                   {saving ? 'Saving…' : 'Save'}
                 </Text>
-              </TouchableOpacity>
+              </PressScale>
             </View>
           </View>
         </KeyboardAvoidingView>

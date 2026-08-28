@@ -21,6 +21,7 @@ import { fetchGrokInsight } from '../../utils/aiInsights';
 import { AiInsightModal } from '../../components/AiInsightModal';
 import { ProtocolHelper } from '../../components/ProtocolHelper';
 import { GlucoseLogForm } from '../../components/GlucoseLogForm';
+import { PressScale } from '../../components/motion';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   BPReadingInputSchema,
@@ -413,15 +414,15 @@ export default function LogScreen() {
           />
         </View>
 
-        <TouchableOpacity
+        <PressScale
           style={[styles.saveButton, { backgroundColor: colors.primary }]}
           onPress={handleSave}
-          activeOpacity={0.85}
+          accessibilityLabel={isEditing ? 'Update reading' : 'Save reading'}
         >
           <Text style={[styles.saveText, { color: colors.primaryForeground }]}>
             {isEditing ? 'Update Reading' : 'Save Reading'}
           </Text>
-        </TouchableOpacity>
+        </PressScale>
 
         {isEditing && (
           <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton}>

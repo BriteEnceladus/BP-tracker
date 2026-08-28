@@ -73,10 +73,7 @@ function RootLayoutNav() {
                   >
                     {showOnboarding && <Stack.Screen name="onboarding" />}
                     <Stack.Screen name="(tabs)" />
-                    <Stack.Screen
-                      name="reading/[id]"
-                      options={{ animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade' }}
-                    />
+                    <Stack.Screen name="reading/[id]" />
                   </Stack>
                 </TargetProvider>
               </GlucosePrefsProvider>

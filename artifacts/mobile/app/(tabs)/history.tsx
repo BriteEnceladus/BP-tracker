@@ -30,6 +30,7 @@ import { pickTextFile } from '../../utils/filePick';
 import { BPReading } from '../../src/schemas';
 import { Feather } from '@expo/vector-icons';
 import { Swipeable } from 'react-native-gesture-handler';
+import { PressScale, ScreenEnter } from '../../components/motion';
 
 type Range = 7 | 14 | 30 | 90 | 0;
 
@@ -215,6 +216,7 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScreenEnter>
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>History</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -224,17 +226,19 @@ export default function HistoryScreen() {
           <TouchableOpacity onPress={exportToCSV} accessibilityLabel="Export CSV" hitSlop={8}>
             <Feather name="download" size={22} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity
+          <PressScale
             onPress={() => router.push('/log')}
             accessibilityLabel="Log new reading"
             style={[styles.logBtn, { backgroundColor: colors.primary }]}
           >
             <Feather name="plus-circle" size={18} color={colors.primaryForeground} />
             <Text style={[styles.logBtnText, { color: colors.primaryForeground }]}>Log</Text>
-          </TouchableOpacity>
+          </PressScale>
         </View>
       </View>
+      </ScreenEnter>
 
+      <ScreenEnter delay={40}>
       <View style={styles.filterRow}>
         {ranges.map((r) => {
           const locked = !canViewHistoryRange(isPremium, r.value);
@@ -265,6 +269,7 @@ export default function HistoryScreen() {
           );
         })}
       </View>
+      </ScreenEnter>
       {!isPremium ? (
         <Text style={{ color: colors.mutedForeground, fontSize: 12, paddingHorizontal: 16, paddingBottom: 8 }}>
           Showing the last {FREE_HISTORY_DAYS} days. {hiddenCount > 0 ? `${hiddenCount} older reading(s) stay encrypted on this device` : 'Older logs stay on this device'} and unlock with Pro. Nothing is deleted if Pro turns off.
@@ -284,19 +289,20 @@ export default function HistoryScreen() {
                 ? `Older logs stay encrypted on this device. Pro unlocks history beyond ${FREE_HISTORY_DAYS} days.`
                 : 'Log a reading to start your history.'}
           </Text>
-          <TouchableOpacity
+          <PressScale
             onPress={() => router.push('/log')}
             accessibilityLabel="Log new reading"
             style={[styles.emptyLogBtn, { backgroundColor: colors.primary }]}
           >
             <Text style={{ color: colors.primaryForeground, fontWeight: '600' }}>Log reading</Text>
-          </TouchableOpacity>
+          </PressScale>
         </View>
       ) : (
         <FlatList
           data={sortedReadings}
           keyExtractor={(item) => item.id?.toString() || item.timestamp}
           ListHeaderComponent={
+            <ScreenEnter delay={80}>
             <View style={{ marginBottom: 16 }}>
               {sortedReadings.length > 1 && (
                 <View style={{ marginBottom: 16 }}>
@@ -315,6 +321,7 @@ export default function HistoryScreen() {
                 <StatCard label="Readings" value={sortedReadings.length} />
               </View>
             </View>
+            </ScreenEnter>
           }
           renderItem={({ item }) => (
             <Swipeable

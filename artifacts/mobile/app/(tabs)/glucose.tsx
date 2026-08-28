@@ -18,6 +18,7 @@ import { useTarget } from '../../context/TargetContext';
 import { GlucoseCard } from '../../components/GlucoseCard';
 import { GlucoseChart } from '../../components/GlucoseChart';
 import { GlucoseInsightCard } from '../../components/GlucoseInsightCard';
+import { PressScale, ScreenEnter } from '../../components/motion';
 import { StatCard } from '../../components/StatCard';
 import type { GlucoseReading } from '../../src/schemas';
 import {
@@ -150,6 +151,7 @@ export default function GlucoseHistoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
+      <ScreenEnter>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Glucose</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -159,14 +161,17 @@ export default function GlucoseHistoryScreen() {
           <TouchableOpacity onPress={importCsv} style={[styles.iconBtn, { borderColor: colors.border }]}>
             <Feather name="upload" size={18} color={colors.foreground} />
           </TouchableOpacity>
-          <TouchableOpacity
+          <PressScale
             onPress={() => router.push({ pathname: '/log', params: { metric: 'glucose' } })}
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
+            accessibilityLabel="Log glucose"
           >
             <Feather name="plus" size={18} color={colors.primaryForeground} />
-          </TouchableOpacity>
+          </PressScale>
         </View>
       </View>
+      </ScreenEnter>
+      <ScreenEnter delay={40}>
       <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>{GLUCOSE_DISCLAIMER}</Text>
 
       <View style={styles.filterRow}>
@@ -203,6 +208,7 @@ export default function GlucoseHistoryScreen() {
           Showing the last {FREE_HISTORY_DAYS} days. {hiddenCount > 0 ? `${hiddenCount} older reading(s) stay encrypted on this device` : 'Older logs stay on this device'} and unlock with Pro. Nothing is deleted if Pro turns off.
         </Text>
       ) : null}
+      </ScreenEnter>
 
       {isLoading ? (
         <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 40 }}>Loading…</Text>
@@ -215,17 +221,19 @@ export default function GlucoseHistoryScreen() {
           <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: 6 }}>
             Values stay on this device, encrypted. Restore from Settings if you have a backup.
           </Text>
-          <TouchableOpacity
+          <PressScale
             onPress={() => router.push({ pathname: '/log', params: { metric: 'glucose' } })}
+            accessibilityLabel="Log glucose"
           >
             <Text style={{ color: colors.primary, fontWeight: '600', marginTop: 12 }}>Log glucose →</Text>
-          </TouchableOpacity>
+          </PressScale>
         </View>
       ) : (
         <FlatList
           data={sorted}
           keyExtractor={(item) => item.id?.toString() || item.timestamp}
           ListHeaderComponent={
+            <ScreenEnter delay={80}>
             <View style={{ marginBottom: 16 }}>
               {sorted.length > 1 ? <GlucoseChart readings={filtered} unit={unit} height={220} /> : null}
               <View style={styles.statsRow}>
@@ -238,6 +246,7 @@ export default function GlucoseHistoryScreen() {
               </View>
               {insightCard ? <GlucoseInsightCard card={insightCard} /> : null}
             </View>
+            </ScreenEnter>
           }
           renderItem={({ item }) => (
             <Swipeable

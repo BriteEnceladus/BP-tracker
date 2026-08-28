@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Smoothness follow-up on the existing motion tokens: remaining screens use ScreenEnter / PressScale, list windows stay tight, stack stays a ~200ms fade.
 - Log tab moved into History header; widget tap remains quick-log into the form.
 - Grok AI insights are parked: Settings toggle and post-log card are hidden. Kill switch `AI_INSIGHTS_AVAILABLE` stays false so no request is sent even if a prior opt-in flag exists. Code and key storage are kept for a later date.
 - Log tab (Blood pressure form): optional glucose value and context category sit directly under Heart Rate. Typing a value shows live educational band + Fasting / Before meal / After meal / Bedtime / Random / Other. Saved as a separate encrypted glucose record. Validated before the BP row is written. Leave blank to skip.

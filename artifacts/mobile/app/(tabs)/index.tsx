@@ -36,7 +36,7 @@ import { setDailyReminderEnabled } from "@/utils/reminders";
 import { getGlucoseAverage, getGlucoseReadingsForDays, GLUCOSE_DISCLAIMER } from "@/utils/glucoseUtils";
 import { generateGlucoseInsight } from "@/utils/glucoseInsights";
 import { useTarget } from "@/context/TargetContext";
-import { ScreenEnter } from "@/components/motion";
+import { PressScale, ScreenEnter } from "@/components/motion";
 
 export default function DashboardScreen() {
   const colors = useColors();
@@ -159,12 +159,13 @@ export default function DashboardScreen() {
           >
             <Feather name="bell" size={20} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity
+          <PressScale
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
             onPress={() => router.push("/log")}
+            accessibilityLabel="Log new reading"
           >
             <Feather name="plus" size={22} color={colors.primaryForeground} />
-          </TouchableOpacity>
+          </PressScale>
         </View>
       </View>
 

@@ -37,6 +37,7 @@ import { pickBackupFile, shareBackupFile } from '../../utils/backupShare';
 import { sharePdfReport } from '../../utils/pdfShare';
 import { isProtocolHidden, setProtocolHidden } from '../../utils/protocolHelper';
 import { getGlucoseReadingsForDays } from '../../utils/glucoseUtils';
+import { ScreenEnter } from '../../components/motion';
 import { getReadingsForDays } from '../../utils/bpUtils';
 import { parseGlucoseTargetMgdl } from '../../utils/targets';
 import { buildWidgetSnapshot } from '../../utils/widgetSnapshot';
@@ -358,16 +359,20 @@ export default function SettingsScreen() {
       contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 40 }}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={[styles.title, { color: colors.foreground }]}>Settings</Text>
+      <ScreenEnter>
+        <Text style={[styles.title, { color: colors.foreground }]}>Settings</Text>
+      </ScreenEnter>
 
-      <View style={[styles.notice, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Feather name="alert-circle" size={18} color={colors.primary} />
-        <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>
-          BP Tracker is a personal wellness tracking tool only. It is{' '}
-          <Text style={{ fontWeight: '700', color: colors.foreground }}>not a regulated medical device</Text>
-          {' '}and does not diagnose, treat, or replace professional medical advice.
-        </Text>
-      </View>
+      <ScreenEnter delay={40}>
+        <View style={[styles.notice, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Feather name="alert-circle" size={18} color={colors.primary} />
+          <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>
+            BP Tracker is a personal wellness tracking tool only. It is{' '}
+            <Text style={{ fontWeight: '700', color: colors.foreground }}>not a regulated medical device</Text>
+            {' '}and does not diagnose, treat, or replace professional medical advice.
+          </Text>
+        </View>
+      </ScreenEnter>
 
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Privacy & Security</Text>
