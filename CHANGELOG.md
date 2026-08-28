@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Grok AI insights are parked: Settings toggle and post-log card are hidden. Kill switch `AI_INSIGHTS_AVAILABLE` stays false so no request is sent even if a prior opt-in flag exists. Code and key storage are kept for a later date.
 - Log tab (Blood pressure form): optional glucose value and context category sit directly under Heart Rate. Typing a value shows live educational band + Fasting / Before meal / After meal / Bedtime / Random / Other. Saved as a separate encrypted glucose record. Validated before the BP row is written. Leave blank to skip.
 - Vercel preview/dev PWA: Expo web export (`expo export -p web` → `dist`) plus SPA rewrites so Expo Router paths do not 404. Static client only — no health data leaves the browser.
 - Motion pass on the development/preview build: Reanimated enter/press/pulse tokens, OS Reduce Motion respected, shorter fade navigation, LockScreen biometric ring uses PulseScale (paused while authenticating), Dashboard sections use staggered ScreenEnter, tighter list windows + swipe damping, memoized BP chart.
