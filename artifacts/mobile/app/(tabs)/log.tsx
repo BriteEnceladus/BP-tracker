@@ -44,7 +44,7 @@ export default function LogScreen() {
   const { readings, addReading, updateReading } = useBP();
   const { glucose, addGlucose } = useGlucose();
   const { unit } = useGlucosePrefs();
-  const { insightsEnabled, hasApiKey, getApiKey } = useAiSettings();
+  const { insightsAvailable, insightsEnabled, hasApiKey, getApiKey } = useAiSettings();
   const [insightOpen, setInsightOpen] = useState(false);
   const [insightLoading, setInsightLoading] = useState(false);
   const [insightText, setInsightText] = useState<string | null>(null);
@@ -163,7 +163,7 @@ export default function LogScreen() {
       await addReading(readingData);
       if (companion.kind === 'ok') await addGlucose(companion.data);
 
-      if (insightsEnabled) {
+      if (insightsAvailable && insightsEnabled) {
         if (!hasApiKey) {
           Alert.alert(
             'Add an xAI API key',
@@ -431,6 +431,7 @@ export default function LogScreen() {
         </>
         ) : null}
       </ScrollView>
+      {insightsAvailable ? (
       <AiInsightModal
         visible={insightOpen}
         loading={insightLoading}
@@ -441,6 +442,7 @@ export default function LogScreen() {
           router.back();
         }}
       />
+      ) : null}
     </KeyboardAvoidingView>
   );
 }

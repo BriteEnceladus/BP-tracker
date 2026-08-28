@@ -71,7 +71,7 @@ export default function SettingsScreen() {
     lock,
     cryptoKey,
   } = useCrypto();
-  const { insightsEnabled, hasApiKey, setInsightsEnabled, saveApiKey, clearApiKey } = useAiSettings();
+  const { insightsAvailable, insightsEnabled, hasApiKey, setInsightsEnabled, saveApiKey, clearApiKey } = useAiSettings();
   const { isPremium, setMockPremium, restorePurchases, requirePro } = usePremium();
   const { unit: glucoseUnit, setUnit: setGlucoseUnit, tabVisible, setTabVisible } = useGlucosePrefs();
   const { target, saveTarget } = useTarget();
@@ -530,6 +530,7 @@ export default function SettingsScreen() {
         </Text>
       </View>
 
+      {insightsAvailable ? (
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Grok AI insights</Text>
         <View style={styles.row}>
@@ -567,6 +568,7 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
+      ) : null}
 
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Reminders</Text>
@@ -710,7 +712,7 @@ export default function SettingsScreen() {
       </View>
 
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-        Your data stays on your device unless you opt in to Grok insights or export a file.
+        Your data stays on your device unless you export a file.
       </Text>
     </ScrollView>
   );
