@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,7 +48,7 @@ export default function HistoryScreen() {
   const { isPremium, requirePro } = usePremium();
   const [range, setRange] = useState<Range>(FREE_HISTORY_DAYS as Range);
   const [recentlyDeleted, setRecentlyDeleted] = useState<BPReading | null>(null);
-  const [undoTimeout, setUndoTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const effectiveRange: Range = canViewHistoryRange(isPremium, range)
     ? range
@@ -152,21 +151,20 @@ export default function HistoryScreen() {
     });
 
     setRecentlyDeleted(readingToDelete);
-    if (undoTimeout) clearTimeout(undoTimeout);
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
 
-    const timeout = setTimeout(() => {
+    undoTimeoutRef.current = setTimeout(() => {
       setRecentlyDeleted(null);
+      undoTimeoutRef.current = null;
     }, 15000);
-
-    setUndoTimeout(timeout);
   };
 
   const handleUndo = async () => {
     if (!recentlyDeleted) return;
 
-    if (undoTimeout) {
-      clearTimeout(undoTimeout);
-      setUndoTimeout(null);
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
     }
 
     try {
@@ -179,16 +177,16 @@ export default function HistoryScreen() {
         medicationTaken: recentlyDeleted.medicationTaken,
       });
       setRecentlyDeleted(null);
-    } catch (error) {
+    } catch {
       Alert.alert('Undo Failed', 'Could not restore the reading.');
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
-      if (undoTimeout) clearTimeout(undoTimeout);
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
     };
-  }, [undoTimeout]);
+  }, []);
 
   const renderRightActions = (item: any) => (
     <TouchableOpacity

@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Svg, { Line, Polyline, Circle } from 'react-native-svg';
 import { useColors } from '../hooks/useColors';
 import { BPReading } from '../src/db';
@@ -13,7 +13,8 @@ interface BPChartProps {
 
 function BPChartInner({ readings, height = 220, onPointPress }: BPChartProps) {
   const colors = useColors();
-  const width = Dimensions.get('window').width - 60;
+  const { width: windowWidth } = useWindowDimensions();
+  const width = windowWidth - 60;
 
   const sorted = useMemo(() => {
     if (readings.length < 2) return [];
@@ -23,6 +24,24 @@ function BPChartInner({ readings, height = 220, onPointPress }: BPChartProps) {
     return downsampleEven(chronological, 48);
   }, [readings]);
 
+  const { maxValue, minValue } = useMemo(() => {
+    if (sorted.length < 2) return { maxValue: 0, minValue: 0 };
+    let maxSys = -Infinity;
+    let minSys = Infinity;
+    let maxDia = -Infinity;
+    let minDia = Infinity;
+    for (const r of sorted) {
+      if (r.systolic > maxSys) maxSys = r.systolic;
+      if (r.systolic < minSys) minSys = r.systolic;
+      if (r.diastolic > maxDia) maxDia = r.diastolic;
+      if (r.diastolic < minDia) minDia = r.diastolic;
+    }
+    return {
+      maxValue: Math.max(maxSys, maxDia) + 10,
+      minValue: Math.min(minSys, minDia) - 10,
+    };
+  }, [sorted]);
+
   if (sorted.length < 2) {
     return (
       <View style={[styles.container, { height }]}>
@@ -30,14 +49,6 @@ function BPChartInner({ readings, height = 220, onPointPress }: BPChartProps) {
       </View>
     );
   }
-
-  const maxSys = Math.max(...sorted.map(r => r.systolic));
-  const minSys = Math.min(...sorted.map(r => r.systolic));
-  const maxDia = Math.max(...sorted.map(r => r.diastolic));
-  const minDia = Math.min(...sorted.map(r => r.diastolic));
-
-  const maxValue = Math.max(maxSys, maxDia) + 10;
-  const minValue = Math.min(minSys, minDia) - 10;
 
   const getX = (index: number) => (index / (sorted.length - 1)) * (width - 40) + 20;
   const getY = (value: number) => {

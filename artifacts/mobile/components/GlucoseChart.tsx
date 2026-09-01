@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, { Line, Polyline, Circle } from 'react-native-svg';
 import { useColors } from '../hooks/useColors';
 import type { GlucoseDisplayUnit, GlucoseReading } from '../src/schemas';
@@ -16,22 +16,24 @@ function GlucoseChartInner({
   height?: number;
 }) {
   const colors = useColors();
-  const width = Dimensions.get('window').width - 60;
+  const { width: windowWidth } = useWindowDimensions();
+  const width = windowWidth - 60;
 
-  if (readings.length < 2) {
+  const sorted = useMemo(() => {
+    if (readings.length < 2) return [];
+    const chronological = [...readings].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    return downsampleEven(chronological, 48);
+  }, [readings]);
+
+  if (sorted.length < 2) {
     return (
       <View style={[styles.container, { height }]}>
         <Text style={{ color: colors.mutedForeground }}>Not enough data for chart</Text>
       </View>
     );
   }
-
-  const sorted = useMemo(() => {
-    const chronological = [...readings].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    return downsampleEven(chronological, 48);
-  }, [readings]);
   const values = sorted.map((r) => r.valueMgdl);
   const maxValue = Math.max(...values) + 10;
   const minValue = Math.max(0, Math.min(...values) - 10);

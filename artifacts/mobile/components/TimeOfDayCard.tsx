@@ -14,7 +14,11 @@ type Props = {
   onPressPro?: () => void;
 };
 
-export function TimeOfDayCard({ summaries, isPremium, onPressPro }: Props) {
+export const TimeOfDayCard = React.memo(function TimeOfDayCard({
+  summaries,
+  isPremium,
+  onPressPro,
+}: Props) {
   const colors = useColors();
   const peak = peakSystolicBucket(summaries, 3);
   const hasAny = summaries.some((s) => s.count > 0);
@@ -60,7 +64,7 @@ export function TimeOfDayCard({ summaries, isPremium, onPressPro }: Props) {
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

@@ -39,7 +39,12 @@ function Bar({
   );
 }
 
-export function MedsVsBpCard({ summary, isPremium, activeMedCount, onPressPro }: Props) {
+export const MedsVsBpCard = React.memo(function MedsVsBpCard({
+  summary,
+  isPremium,
+  activeMedCount,
+  onPressPro,
+}: Props) {
   const colors = useColors();
   const line = formatMedsVsBpLine(summary);
   const total = summary.taken.count + summary.notTaken.count;
@@ -93,7 +98,7 @@ export function MedsVsBpCard({ summary, isPremium, activeMedCount, onPressPro }:
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
