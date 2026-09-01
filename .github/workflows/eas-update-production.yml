@@ -1,0 +1,63 @@
+name: EAS Update → Production (Manual Promote)
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Update message (shown in EAS dashboard)"
+        required: false
+        default: "Promote to production"
+
+concurrency:
+  group: eas-update-production
+  cancel-in-progress: false
+
+jobs:
+  update-production:
+    name: Publish to production channel
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: artifacts/mobile
+
+    steps:
+      - name: Check for EXPO_TOKEN
+        working-directory: .
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "❌ EXPO_TOKEN secret is missing."
+            echo "Create one at https://expo.dev/accounts/[account]/settings/access-tokens"
+            echo "Then add it as a repository secret named EXPO_TOKEN."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: artifacts/mobile/pnpm-lock.yaml
+
+      - name: Setup Expo / EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish update to production channel
+        run: |
+          eas update \
+            --channel production \
+            --message "${{ github.event.inputs.message }}" \
+            --non-interactive

@@ -7,6 +7,11 @@ node_modules/
 .expo/
 dist/
 web-build/
+expo-env.d.ts
+
+# Generated native projects (CNG / expo prebuild)
+/android/
+/ios/
 
 # Native
 *.orig.*

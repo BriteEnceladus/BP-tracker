@@ -18,6 +18,10 @@
 - Year-in-review clinician PDF (Pro): monthly averages, category counts, active meds, 30-day appendix. Optional streak/target if provided. Notes omitted. Not a medical device.
 - Android Home Screen widget (Pro, opt-in): latest SYS/DIA + category + tap to log. Redacted snapshot (no notes/ids/timestamps). Clears on lock. Needs a dev client or EAS build — not Expo Go.
 
+- Safer legacy medication migration: keep plaintext meds if encrypted persist fails; skip corrupt JSON.
+- History undo timeout is stored in a ref so timers clear on unmount without extra renders.
+- Local Android development build via `npx expo run:android` (`expo-dev-client`). Expo Go cannot run native AES-256-GCM.
+- EAS `development` profile now produces an installable APK. Windows local builds should use a short path (`C:\bp`) and LongPathsEnabled.
 ## 1.1.1 — 2026-08-15
 
 - CSV import is live on History and Settings (same format as export).

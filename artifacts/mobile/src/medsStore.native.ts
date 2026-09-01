@@ -47,16 +47,31 @@ async function load(key: SessionCryptoKey): Promise<Medication[]> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      // Try legacy key once
+      // Try legacy key once — migrate ONLY after new-format persist succeeds
       const legacy = await AsyncStorage.getItem('bp_medications_v1');
       if (legacy) {
-        const parsed: Medication[] = JSON.parse(legacy);
+        let parsed: Medication[];
+        try {
+          parsed = JSON.parse(legacy);
+        } catch {
+          memoryCache = [];
+          return memoryCache;
+        }
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          memoryCache = [];
+          return memoryCache;
+        }
         memoryCache = parsed;
         const maxId = parsed.reduce((m, r) => Math.max(m, r.id ?? 0), 0);
         nextId = maxId + 1;
-        // Re-persist encrypted and drop legacy
-        await persist(parsed, key);
-        await AsyncStorage.removeItem('bp_medications_v1');
+        // Persist encrypted first; only drop legacy after success
+        try {
+          await persist(parsed, key);
+          await AsyncStorage.removeItem('bp_medications_v1');
+        } catch (e) {
+          console.warn('[medsStore.native] legacy migration persist failed, keeping legacy', e);
+          // Keep memoryCache pointing to parsed legacy data so the caller still gets readings
+        }
         return memoryCache;
       }
       memoryCache = [];
