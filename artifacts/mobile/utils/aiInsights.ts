@@ -1,3 +1,4 @@
+import { AI_INSIGHTS_AVAILABLE } from './aiFlags';
 import type { AnonymizedInsightPayload } from './aiPayload';
 
 const XAI_CHAT_URL = 'https://api.x.ai/v1/chat/completions';
@@ -16,6 +17,9 @@ export async function fetchGrokInsight(
   apiKey: string,
   payload: AnonymizedInsightPayload
 ): Promise<string> {
+  if (!AI_INSIGHTS_AVAILABLE) {
+    throw new Error('Grok insights are parked');
+  }
   const response = await fetch(XAI_CHAT_URL, {
     method: 'POST',
     headers: {

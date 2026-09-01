@@ -77,8 +77,6 @@ async function persist(readings: BPReading[], key: SessionCryptoKey): Promise<vo
         return {
           id: r.id,
           encrypted,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
         };
       })
     );

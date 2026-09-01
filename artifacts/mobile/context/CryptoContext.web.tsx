@@ -44,7 +44,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
   const [biometricSupported, setBiometricSupported] = useState(false);
   const [biometricEnrolled, setBiometricEnrolled] = useState(false);
   const passwordRef = useRef("");
-  const [autoLockMinutes, setAutoLockMinutesState] = useState(10);
+  const [autoLockMinutes, setAutoLockMinutesState] = useState(5);
   const [failedUnlockAttempts, setFailedUnlockAttempts] = useState(0);
   const [lockoutRemainingMs] = useState(0);
 

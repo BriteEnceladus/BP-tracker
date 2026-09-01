@@ -9,12 +9,12 @@ import React, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { AI_INSIGHTS_AVAILABLE } from '../utils/aiFlags';
 
 const ENABLED_KEY = 'bp_ai_insights_opt_in';
 const API_KEY_STORE = 'bp_xai_api_key';
 
-/** Parked. Flip to true to restore Settings toggle + post-log Grok card. */
-export const AI_INSIGHTS_AVAILABLE = false;
+export { AI_INSIGHTS_AVAILABLE };
 
 interface AiSettingsContextType {
   insightsAvailable: boolean;
