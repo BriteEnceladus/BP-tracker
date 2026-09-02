@@ -14,7 +14,7 @@ export default function OnboardingScreen() {
 
   const steps = [
     {
-      icon: 'shield-check',
+      icon: 'shield',
       title: 'Your health data stays private',
       description: 'Everything is stored securely on your device. No accounts, no cloud, no one else can see your readings.',
       highlight: '100% Private',
@@ -46,7 +46,7 @@ export default function OnboardingScreen() {
     {
       icon: 'check-circle',
       title: "You're ready to start",
-      description: 'Create your lock password on the next screen, then log your first reading.',
+      description: 'Your lock password is set. Log your first reading whenever you are ready.',
       highlight: 'All Set',
     },
   ];
