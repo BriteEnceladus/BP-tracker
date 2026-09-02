@@ -23,6 +23,12 @@
       "distribution": "store",
       "autoIncrement": true,
       "channel": "production"
+    },
+    "productionApk": {
+      "extends": "production",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
