@@ -1,8 +1,8 @@
 name: EAS Update → Preview
 
+# OTA is parked for Play launch. Do not publish on push to main.
+# Re-enable the push trigger after updates.enabled is true in app config.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:

@@ -1,5 +1,7 @@
 name: EAS Update → Production (Manual Promote)
 
+# OTA is parked for Play launch. This workflow stays manual.
+# Do not run it until updates.enabled is true in the store binary.
 on:
   workflow_dispatch:
     inputs:
