@@ -275,7 +275,7 @@ export default function DashboardScreen() {
         )}
 
         {(activeMedCount > 0 || medsVsBp.taken.count > 0) && (
-          <ScreenEnter delay={200}>
+          <ScreenEnter delay={160}>
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
               Meds vs BP
@@ -291,7 +291,7 @@ export default function DashboardScreen() {
         )}
 
         {last7Days.length > 0 && (
-          <ScreenEnter delay={240}>
+          <ScreenEnter delay={160}>
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Last 7 Days</Text>
             <View style={styles.statsRow}>
@@ -317,7 +317,7 @@ export default function DashboardScreen() {
         )}
 
         {last7Days.length > 1 && (
-          <ScreenEnter delay={280}>
+          <ScreenEnter delay={160}>
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Trend (Last 7 Days)</Text>
             <BPChart 
@@ -334,7 +334,7 @@ export default function DashboardScreen() {
         )}
 
         {recentReadings.length > 0 && (
-          <ScreenEnter delay={320}>
+          <ScreenEnter delay={160}>
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>Recent Readings</Text>

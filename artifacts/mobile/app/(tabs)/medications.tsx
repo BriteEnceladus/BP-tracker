@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -98,7 +98,7 @@ export default function MedicationsScreen() {
         await addMedication({ ...parsed.data, active: parsed.data.active ?? true });
       }
       setModalVisible(false);
-    } catch (e) {
+    } catch {
       setFormError('Could not save. Please try again.');
     } finally {
       setSaving(false);
@@ -142,6 +142,39 @@ export default function MedicationsScreen() {
     return { activeMeds: active, medRows: rows };
   }, [medications]);
 
+  const renderMedItem = useCallback(
+    ({
+      item,
+    }: {
+      item:
+        | { id: string; kind: 'section'; title: string }
+        | { id: string; kind: 'med'; med: Medication };
+    }) => {
+      if (item.kind === 'section') {
+        return (
+          <Text
+            style={[
+              styles.sectionLabel,
+              { color: colors.mutedForeground, marginTop: item.title === 'Inactive' ? 20 : 0 },
+            ]}
+          >
+            {item.title}
+          </Text>
+        );
+      }
+      return (
+        <MedCard
+          med={item.med}
+          colors={colors}
+          onEdit={() => openEdit(item.med)}
+          onToggle={() => item.med.id != null && toggleActive(item.med.id)}
+          onDelete={() => confirmDelete(item.med)}
+        />
+      );
+    },
+    [colors, toggleActive]
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
       <ScreenEnter>
@@ -164,29 +197,7 @@ export default function MedicationsScreen() {
       <FlatList
         data={isLoading || medications.length === 0 ? [] : medRows}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          if (item.kind === 'section') {
-            return (
-              <Text
-                style={[
-                  styles.sectionLabel,
-                  { color: colors.mutedForeground, marginTop: item.title === 'Inactive' ? 20 : 0 },
-                ]}
-              >
-                {item.title}
-              </Text>
-            );
-          }
-          return (
-            <MedCard
-              med={item.med}
-              colors={colors}
-              onEdit={() => openEdit(item.med)}
-              onToggle={() => item.med.id != null && toggleActive(item.med.id)}
-              onDelete={() => confirmDelete(item.med)}
-            />
-          );
-        }}
+        renderItem={renderMedItem}
         ListHeaderComponent={
           readings.length > 0 ? (
             <ScreenEnter delay={40}>
@@ -321,7 +332,7 @@ export default function MedicationsScreen() {
   );
 }
 
-function MedCard({
+const MedCard = React.memo(function MedCard({
   med,
   colors,
   onEdit,
@@ -362,7 +373,7 @@ function MedCard({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20 },

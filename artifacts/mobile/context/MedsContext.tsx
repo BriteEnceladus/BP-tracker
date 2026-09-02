@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
 import { Medication, MedicationInput } from '../src/schemas';
@@ -65,43 +66,54 @@ export function MedsProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [isUnlocked, cryptoKey, refresh]);
 
-  const addMedication = async (data: MedicationInput) => {
-    await store.addMedication(data, getKey());
-    await refresh();
-  };
-
-  const updateMedication = async (id: number, updates: Partial<MedicationInput>) => {
-    await store.updateMedication(id, updates, getKey());
-    await refresh();
-  };
-
-  const deleteMedication = async (id: number) => {
-    await store.deleteMedication(id, getKey());
-    await refresh();
-  };
-
-  const toggleActive = async (id: number) => {
-    const med = medications.find((m) => m.id === id);
-    if (!med) return;
-    await store.updateMedication(id, { active: !med.active }, getKey());
-    await refresh();
-  };
-
-  return (
-    <MedsContext.Provider
-      value={{
-        medications,
-        isLoading,
-        addMedication,
-        updateMedication,
-        deleteMedication,
-        toggleActive,
-        refresh,
-      }}
-    >
-      {children}
-    </MedsContext.Provider>
+  const addMedication = useCallback(
+    async (data: MedicationInput) => {
+      await store.addMedication(data, getKey());
+      await refresh();
+    },
+    [getKey, refresh]
   );
+
+  const updateMedication = useCallback(
+    async (id: number, updates: Partial<MedicationInput>) => {
+      await store.updateMedication(id, updates, getKey());
+      await refresh();
+    },
+    [getKey, refresh]
+  );
+
+  const deleteMedication = useCallback(
+    async (id: number) => {
+      await store.deleteMedication(id, getKey());
+      await refresh();
+    },
+    [getKey, refresh]
+  );
+
+  const toggleActive = useCallback(
+    async (id: number) => {
+      const med = medications.find((m) => m.id === id);
+      if (!med) return;
+      await store.updateMedication(id, { active: !med.active }, getKey());
+      await refresh();
+    },
+    [medications, getKey, refresh]
+  );
+
+  const value = useMemo(
+    () => ({
+      medications,
+      isLoading,
+      addMedication,
+      updateMedication,
+      deleteMedication,
+      toggleActive,
+      refresh,
+    }),
+    [medications, isLoading, addMedication, updateMedication, deleteMedication, toggleActive, refresh]
+  );
+
+  return <MedsContext.Provider value={value}>{children}</MedsContext.Provider>;
 }
 
 export function useMeds() {

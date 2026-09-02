@@ -15,7 +15,7 @@ type Props = {
   visible: boolean;
 };
 
-export function ProtocolHelper({ visible }: Props) {
+export const ProtocolHelper = React.memo(function ProtocolHelper({ visible }: Props) {
   const colors = useColors();
   const [ready, setReady] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -95,7 +95,7 @@ export function ProtocolHelper({ visible }: Props) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

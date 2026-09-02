@@ -9,7 +9,6 @@ import React, {
 } from 'react';
 import type { GlucoseDisplayUnit } from '../src/schemas';
 import {
-  GLUCOSE_TAB_VISIBLE_KEY,
   getGlucoseDisplayUnit,
   getGlucoseTabVisible,
   setGlucoseDisplayUnit,
@@ -70,5 +69,3 @@ export function useGlucosePrefs() {
   if (!ctx) throw new Error('useGlucosePrefs must be used within GlucosePrefsProvider');
   return ctx;
 }
-
-export { GLUCOSE_TAB_VISIBLE_KEY };

@@ -10,7 +10,6 @@ import { BPReading, BPReadingInput } from './schemas';
 import {
   encryptReading,
   decryptReading,
-  type EncryptedReadingPayload,
   type SessionCryptoKey,
 } from '../utils/readingEncryption';
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -142,7 +142,7 @@ export default function HistoryScreen() {
     }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = useCallback((id: number) => {
     const readingToDelete = sortedReadings.find((r) => r.id === id);
     if (!readingToDelete) return;
 
@@ -157,7 +157,7 @@ export default function HistoryScreen() {
       setRecentlyDeleted(null);
       undoTimeoutRef.current = null;
     }, 15000);
-  };
+  }, [sortedReadings, deleteReading]);
 
   const handleUndo = async () => {
     if (!recentlyDeleted) return;
@@ -188,20 +188,39 @@ export default function HistoryScreen() {
     };
   }, []);
 
-  const renderRightActions = (item: any) => (
-    <TouchableOpacity
-      style={{
-        backgroundColor: colors.crisis,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 80,
-        borderTopRightRadius: 12,
-        borderBottomRightRadius: 12,
-      }}
-      onPress={() => item.id && handleDelete(item.id)}
-    >
-      <Feather name="trash-2" size={24} color="#FFFFFF" />
-    </TouchableOpacity>
+  const renderRightActions = useCallback(
+    (item: BPReading) => (
+      <TouchableOpacity
+        style={{
+          backgroundColor: colors.crisis,
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 80,
+          borderTopRightRadius: 12,
+          borderBottomRightRadius: 12,
+        }}
+        onPress={() => item.id && handleDelete(item.id)}
+      >
+        <Feather name="trash-2" size={24} color="#FFFFFF" />
+      </TouchableOpacity>
+    ),
+    [colors.crisis, handleDelete]
+  );
+
+  const renderHistoryItem = useCallback(
+    ({ item }: { item: BPReading }) => (
+      <Swipeable
+        friction={2}
+        overshootRight={false}
+        overshootFriction={8}
+        renderRightActions={() => renderRightActions(item)}
+      >
+        <TouchableOpacity onPress={() => item.id && router.push(`/reading/${item.id}`)}>
+          <BPCard reading={item} />
+        </TouchableOpacity>
+      </Swipeable>
+    ),
+    [renderRightActions]
   );
 
   if (isLoading) {
@@ -321,20 +340,7 @@ export default function HistoryScreen() {
             </View>
             </ScreenEnter>
           }
-          renderItem={({ item }) => (
-            <Swipeable
-              friction={2}
-              overshootRight={false}
-              overshootFriction={8}
-              renderRightActions={() => renderRightActions(item)}
-            >
-              <TouchableOpacity
-                onPress={() => item.id && router.push(`/reading/${item.id}`)}
-              >
-                <BPCard reading={item} />
-              </TouchableOpacity>
-            </Swipeable>
-          )}
+          renderItem={renderHistoryItem}
           contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
           showsVerticalScrollIndicator={false}
           initialNumToRender={6}

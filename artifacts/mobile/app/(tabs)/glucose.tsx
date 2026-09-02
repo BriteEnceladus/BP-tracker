@@ -133,20 +133,44 @@ export default function GlucoseHistoryScreen() {
     }
   };
 
-  const renderRightActions = (item: GlucoseReading) => (
-    <TouchableOpacity
-      style={{
-        backgroundColor: colors.crisis,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 80,
-        borderTopRightRadius: 12,
-        borderBottomRightRadius: 12,
-      }}
-      onPress={() => item.id != null && deleteRow(item.id)}
-    >
-      <Feather name="trash-2" size={24} color="#FFFFFF" />
-    </TouchableOpacity>
+  const renderRightActions = useCallback(
+    (item: GlucoseReading) => (
+      <TouchableOpacity
+        style={{
+          backgroundColor: colors.crisis,
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 80,
+          borderTopRightRadius: 12,
+          borderBottomRightRadius: 12,
+        }}
+        onPress={() => item.id != null && deleteRow(item.id)}
+      >
+        <Feather name="trash-2" size={24} color="#FFFFFF" />
+      </TouchableOpacity>
+    ),
+    [colors.crisis, deleteRow]
+  );
+
+  const renderGlucoseItem = useCallback(
+    ({ item }: { item: GlucoseReading }) => (
+      <Swipeable
+        friction={2}
+        overshootRight={false}
+        overshootFriction={8}
+        renderRightActions={() => renderRightActions(item)}
+      >
+        <TouchableOpacity
+          onPress={() =>
+            item.id != null &&
+            router.push({ pathname: '/log', params: { metric: 'glucose', gid: String(item.id) } })
+          }
+        >
+          <GlucoseCard reading={item} unit={unit} targetMgdl={target.glucoseMgdl} />
+        </TouchableOpacity>
+      </Swipeable>
+    ),
+    [renderRightActions, unit, target.glucoseMgdl]
   );
 
   return (
@@ -248,23 +272,7 @@ export default function GlucoseHistoryScreen() {
             </View>
             </ScreenEnter>
           }
-          renderItem={({ item }) => (
-            <Swipeable
-              friction={2}
-              overshootRight={false}
-              overshootFriction={8}
-              renderRightActions={() => renderRightActions(item)}
-            >
-              <TouchableOpacity
-                onPress={() =>
-                  item.id != null &&
-                  router.push({ pathname: '/log', params: { metric: 'glucose', gid: String(item.id) } })
-                }
-              >
-                <GlucoseCard reading={item} unit={unit} targetMgdl={target.glucoseMgdl} />
-              </TouchableOpacity>
-            </Swipeable>
-          )}
+          renderItem={renderGlucoseItem}
           contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
           initialNumToRender={6}
           maxToRenderPerBatch={6}
