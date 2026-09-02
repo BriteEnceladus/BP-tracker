@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- OTA (EAS Update) is off for the Play launch binary: `updates.enabled: false` and `checkAutomatically: NEVER`. Update URL is kept. Preview workflow no longer publishes on push to main. Turn back on after launch by flipping the flag.
 - Smoothness follow-up on the existing motion tokens: remaining screens use ScreenEnter / PressScale, list windows stay tight, stack stays a ~200ms fade.
 - Log tab moved into History header; widget tap remains quick-log into the form.
 - Grok AI insights are parked: Settings toggle and post-log card are hidden. Kill switch `AI_INSIGHTS_AVAILABLE` stays false so no request is sent even if a prior opt-in flag exists. Code and key storage are kept for a later date.
@@ -21,7 +22,7 @@
 - Safer legacy medication migration: keep plaintext meds if encrypted persist fails; skip corrupt JSON.
 - History undo timeout is stored in a ref so timers clear on unmount without extra renders.
 - Local Android development build via `npx expo run:android` (`expo-dev-client`). Expo Go cannot run native AES-256-GCM.
-- EAS `development` profile now produces an installable APK. Windows local builds should use a short path (`C:\bp`) and LongPathsEnabled.
+- EAS `development` profile now produces an installable APK. Windows local builds should use a short path (`C:\\bp`) and LongPathsEnabled.
 ## 1.1.1 — 2026-08-15
 
 - CSV import is live on History and Settings (same format as export).
