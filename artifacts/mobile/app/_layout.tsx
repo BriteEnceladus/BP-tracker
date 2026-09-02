@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BPProvider } from '../context/BPContext';
 import { MedsProvider } from '../context/MedsContext';
 import { GlucoseProvider } from '../context/GlucoseContext';
@@ -13,7 +14,7 @@ import { CryptoProvider, useCrypto } from '../context/CryptoContext';
 import { LockScreen } from '../components/LockScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
-import { View, ActivityIndicator, Platform } from 'react-native';
+import { View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import { MOTION } from '../utils/motion';
 
 const ONBOARDING_COMPLETE_KEY = 'onboardingComplete';
@@ -50,47 +51,65 @@ function RootLayoutNav() {
     );
   }
 
-  if (!isUnlocked) {
-    return <LockScreen />;
-  }
-
+  // Keep the navigator mounted even while locked. Replacing <Stack> with
+  // <LockScreen> on first launch leaves Expo Router with no navigator, so
+  // unlock has nowhere to go and the user stays on the password screen.
   return (
-    <PremiumProvider>
-      <AiSettingsProvider>
-        <BPProvider>
-          <MedsProvider>
-            <GlucoseProvider>
-              <GlucosePrefsProvider>
-                <TargetProvider>
-                  <WidgetSync />
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      animation: Platform.OS === 'web' ? 'none' : 'fade',
-                      animationDuration: MOTION.stack,
-                      contentStyle: { backgroundColor: '#0A1628' },
-                    }}
-                  >
-                    {showOnboarding && <Stack.Screen name="onboarding" />}
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="reading/[id]" />
-                  </Stack>
-                </TargetProvider>
-              </GlucosePrefsProvider>
-            </GlucoseProvider>
-          </MedsProvider>
-        </BPProvider>
-      </AiSettingsProvider>
-    </PremiumProvider>
+    <View style={{ flex: 1 }}>
+      <PremiumProvider>
+        <AiSettingsProvider>
+          <BPProvider>
+            <MedsProvider>
+              <GlucoseProvider>
+                <GlucosePrefsProvider>
+                  <TargetProvider>
+                    <WidgetSync />
+                    <Stack
+                      initialRouteName={showOnboarding ? 'onboarding' : '(tabs)'}
+                      screenOptions={{
+                        headerShown: false,
+                        animation: Platform.OS === 'web' ? 'none' : 'fade',
+                        animationDuration: MOTION.stack,
+                        contentStyle: { backgroundColor: '#0A1628' },
+                      }}
+                    >
+                      <Stack.Screen name="onboarding" />
+                      <Stack.Screen name="(tabs)" />
+                      <Stack.Screen name="log" />
+                      <Stack.Screen name="reading/[id]" />
+                    </Stack>
+                  </TargetProvider>
+                </GlucosePrefsProvider>
+              </GlucoseProvider>
+            </MedsProvider>
+          </BPProvider>
+        </AiSettingsProvider>
+      </PremiumProvider>
+      {!isUnlocked ? (
+        <View style={styles.lockOverlay} pointerEvents="auto">
+          <LockScreen />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <CryptoProvider>
-        <RootLayoutNav />
-      </CryptoProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <CryptoProvider>
+          <RootLayoutNav />
+        </CryptoProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  lockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
+  },
+});
