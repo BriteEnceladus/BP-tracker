@@ -67,7 +67,7 @@ If this policy changes, the “Last updated” date will be revised. Continued u
 
 ## 8. Contact
 
-Questions about this privacy policy can be sent via the GitHub repository:  
+Questions about this privacy policy or the app can be sent to **stellarmatrixai@gmail.com**, or via the GitHub repository:  
 https://github.com/BriteEnceladus/BP-tracker
 
 ---
