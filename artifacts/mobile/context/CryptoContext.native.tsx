@@ -1,5 +1,5 @@
 /**
- * Native CryptoContext — hardened session management.
+ * Native CryptoContext â€” hardened session management.
  *
  * Security posture:
  * - Master password is the root of trust (PBKDF2 100k + AES-GCM verifier).
@@ -72,7 +72,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
   const [failedUnlockAttempts, setFailedUnlockAttempts] = useState(0);
   const [lockoutRemainingMs, setLockoutRemainingMs] = useState(0);
 
-  // Password held only in a ref for biometric enroll — not in React state (reduces snapshot surface)
+  // Password held only in a ref for biometric enroll â€” not in React state (reduces snapshot surface)
   const passwordRef = useRef<string>('');
   const lockoutTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -209,7 +209,7 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
     let backgroundTimestamp: number | null = null;
 
     const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
-      if (nextState === 'background' || nextState === 'inactive') {
+      if (nextState === 'background') {
         backgroundTimestamp = Date.now();
       } else if (nextState === 'active' && backgroundTimestamp) {
         const elapsed = Date.now() - backgroundTimestamp;
@@ -255,3 +255,4 @@ export function useCrypto(): CryptoContextType {
   if (!ctx) throw new Error('useCrypto must be used within CryptoProvider');
   return ctx;
 }
+

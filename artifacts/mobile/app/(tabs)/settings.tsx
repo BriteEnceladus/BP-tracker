@@ -38,6 +38,7 @@ import { sharePdfReport } from '../../utils/pdfShare';
 import { isProtocolHidden, setProtocolHidden } from '../../utils/protocolHelper';
 import { getGlucoseReadingsForDays } from '../../utils/glucoseUtils';
 import { ScreenEnter } from '../../components/motion';
+import { GoogleAccountCard } from '../../components/GoogleAccountCard';
 import { getReadingsForDays } from '../../utils/bpUtils';
 import { parseGlucoseTargetMgdl } from '../../utils/targets';
 import { buildWidgetSnapshot } from '../../utils/widgetSnapshot';
@@ -426,6 +427,9 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
 
+
+      <GoogleAccountCard />
+
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Home Screen</Text>
         <View style={styles.row}>
@@ -439,10 +443,10 @@ export default function SettingsScreen() {
           />
         </View>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Pro, Android, opt-in. Requires a development client or EAS APK — not Expo Go. Latest SYS/DIA
+          Pro, Android, opt-in. Requires a development client or EAS APK â€” not Expo Go. Latest SYS/DIA
           and glucose (mg/dL) can sit on the launcher unencrypted; notes never leave the vault.
           Locking the app clears the numbers. Tap the widget (or the small Quick Log tile) to open
-          the in-app Log form — not to type on the home screen.
+          the in-app Log form â€” not to type on the home screen.
         </Text>
       </View>
 
@@ -532,7 +536,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Your own “below this” goal. Generic color bands stay educational and are not a diagnosis.
+          Your own â€œbelow thisâ€ goal. Generic color bands stay educational and are not a diagnosis.
         </Text>
       </View>
 
@@ -556,7 +560,7 @@ export default function SettingsScreen() {
             style={[styles.input, { backgroundColor: colors.background, color: colors.foreground, borderColor: colors.border }]}
             value={apiKeyDraft}
             onChangeText={setApiKeyDraft}
-            placeholder={hasApiKey ? 'Key saved on this device — paste to replace' : 'xAI API key'}
+            placeholder={hasApiKey ? 'Key saved on this device â€” paste to replace' : 'xAI API key'}
             placeholderTextColor={colors.mutedForeground}
             autoCapitalize="none"
             autoCorrect={false}
@@ -666,7 +670,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
           Free view is the last {FREE_HISTORY_DAYS} days. Every log stays encrypted on this device.
-          Turning Pro on or off never deletes history — Pro only changes what you can see and export.
+          Turning Pro on or off never deletes history â€” Pro only changes what you can see and export.
           Entitlement is a local flag, not health data. Checkout is not connected yet.
         </Text>
       </View>

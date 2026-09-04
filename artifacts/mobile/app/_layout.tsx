@@ -10,8 +10,10 @@ import { TargetProvider } from '../context/TargetContext';
 import { WidgetSync } from '../components/WidgetSync';
 import { AiSettingsProvider } from '../context/AiSettingsContext';
 import { PremiumProvider } from '../context/PremiumContext';
+import { GoogleAuthProvider } from '../context/GoogleAuthContext';
 import { CryptoProvider, useCrypto } from '../context/CryptoContext';
 import { LockScreen } from '../components/LockScreen';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
@@ -54,37 +56,40 @@ function RootLayoutNav() {
   // Keep the navigator mounted even while locked. Replacing <Stack> with
   // <LockScreen> on first launch leaves Expo Router with no navigator, so
   // unlock has nowhere to go and the user stays on the password screen.
+  // ErrorBoundary keeps CryptoProvider alive if a post-unlock provider/screen throws.
   return (
     <View style={{ flex: 1 }}>
-      <PremiumProvider>
-        <AiSettingsProvider>
-          <BPProvider>
-            <MedsProvider>
-              <GlucoseProvider>
-                <GlucosePrefsProvider>
-                  <TargetProvider>
-                    <WidgetSync />
-                    <Stack
-                      initialRouteName={showOnboarding ? 'onboarding' : '(tabs)'}
-                      screenOptions={{
-                        headerShown: false,
-                        animation: Platform.OS === 'web' ? 'none' : 'fade',
-                        animationDuration: MOTION.stack,
-                        contentStyle: { backgroundColor: '#0A1628' },
-                      }}
-                    >
-                      <Stack.Screen name="onboarding" />
-                      <Stack.Screen name="(tabs)" />
-                      <Stack.Screen name="log" />
-                      <Stack.Screen name="reading/[id]" />
-                    </Stack>
-                  </TargetProvider>
-                </GlucosePrefsProvider>
-              </GlucoseProvider>
-            </MedsProvider>
-          </BPProvider>
-        </AiSettingsProvider>
-      </PremiumProvider>
+      <ErrorBoundary>
+        <PremiumProvider>
+          <AiSettingsProvider>
+            <BPProvider>
+              <MedsProvider>
+                <GlucoseProvider>
+                  <GlucosePrefsProvider>
+                    <TargetProvider>
+                      <WidgetSync />
+                      <Stack
+                        initialRouteName={showOnboarding ? 'onboarding' : '(tabs)'}
+                        screenOptions={{
+                          headerShown: false,
+                          animation: Platform.OS === 'web' ? 'none' : 'fade',
+                          animationDuration: MOTION.stack,
+                          contentStyle: { backgroundColor: '#0A1628' },
+                        }}
+                      >
+                        <Stack.Screen name="onboarding" />
+                        <Stack.Screen name="(tabs)" />
+                        <Stack.Screen name="log" />
+                        <Stack.Screen name="reading/[id]" />
+                      </Stack>
+                    </TargetProvider>
+                  </GlucosePrefsProvider>
+                </GlucoseProvider>
+              </MedsProvider>
+            </BPProvider>
+          </AiSettingsProvider>
+        </PremiumProvider>
+      </ErrorBoundary>
       {!isUnlocked ? (
         <View style={styles.lockOverlay} pointerEvents="auto">
           <LockScreen />
@@ -99,7 +104,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <CryptoProvider>
-          <RootLayoutNav />
+          <GoogleAuthProvider>
+            <RootLayoutNav />
+          </GoogleAuthProvider>
         </CryptoProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -109,6 +116,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   lockOverlay: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#0F172A',
     zIndex: 1000,
     elevation: 1000,
   },
