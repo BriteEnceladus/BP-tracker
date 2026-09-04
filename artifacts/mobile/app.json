@@ -2,7 +2,7 @@
   "expo": {
     "name": "BP Tracker",
     "slug": "bp-tracker",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "A secure, standalone blood pressure and heart rate tracking app with local storage, charts, history, and CSV export. Built with Expo for privacy-focused wellness tracking.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,9 +13,9 @@
       "policy": "appVersion"
     },
     "updates": {
-      "enabled": false,
+      "enabled": true,
       "url": "https://u.expo.dev/01be2be0-2ae4-4bee-9974-3620e64ef682",
-      "checkAutomatically": "NEVER",
+      "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
     },
     "splash": {
@@ -36,7 +36,7 @@
     },
     "android": {
       "package": "com.briteenceladus.bptracker",
-      "versionCode": 2,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0F172A"
@@ -136,7 +136,7 @@
     },
     "extra": {
       "appName": "BP Tracker",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "eas": {
         "projectId": "01be2be0-2ae4-4bee-9974-3620e64ef682"
       }

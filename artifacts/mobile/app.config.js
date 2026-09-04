@@ -6,16 +6,16 @@ export default ({ config }) => {
     },
     updates: {
       ...config.updates,
-      // Launch binary must not pull OTA. Flip enabled to true + NEVER→ON_LOAD when ready.
-      enabled: false,
+      // OTA enabled for production channel updates after this binary.
+      enabled: true,
       url: 'https://u.expo.dev/01be2be0-2ae4-4bee-9974-3620e64ef682',
-      checkAutomatically: 'NEVER',
+      checkAutomatically: 'ON_LOAD',
       fallbackToCacheTimeout: 0,
     },
     extra: {
       ...config.extra,
       appName: process.env.EXPO_PUBLIC_APP_NAME || 'BP Tracker',
-      version: process.env.EXPO_PUBLIC_VERSION || '1.1.1',
+      version: process.env.EXPO_PUBLIC_VERSION || '1.1.2',
     },
   };
 };

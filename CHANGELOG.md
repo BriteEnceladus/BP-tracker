@@ -4,7 +4,7 @@
 
 - Lock-screen harden: opaque lock overlay, ErrorBoundary around the unlocked tree (prevents CryptoProvider remount stuck-on-password after setup), AppState auto-lock only on `background` (not `inactive`) on Android.
 - Optional Sign in with Google in Settings (identity only). Stores Google sub/email locally in SecureStore. Does not upload readings, notes, or the master password. Requires EXPO_PUBLIC_GOOGLE_* client IDs and a real APK. App still works signed out.
-- OTA (EAS Update) is off for the Play launch binary: `updates.enabled: false` and `checkAutomatically: NEVER`. Update URL is kept. Preview workflow no longer publishes on push to main. Turn back on after launch by flipping the flag.
+- OTA (EAS Update) enabled for further updates: `updates.enabled: true` and `checkAutomatically: ON_LOAD`. Same Expo Update URL; `runtimeVersion.policy` remains `appVersion`. Production channel left intact.
 - Smoothness follow-up on the existing motion tokens: remaining screens use ScreenEnter / PressScale, list windows stay tight, stack stays a ~200ms fade.
 - Log tab moved into History header; widget tap remains quick-log into the form.
 - Grok AI insights are parked: Settings toggle and post-log card are hidden. Kill switch `AI_INSIGHTS_AVAILABLE` stays false so no request is sent even if a prior opt-in flag exists. Code and key storage are kept for a later date.
@@ -25,6 +25,12 @@
 - History undo timeout is stored in a ref so timers clear on unmount without extra renders.
 - Local Android development build via `npx expo run:android` (`expo-dev-client`). Expo Go cannot run native AES-256-GCM.
 - EAS `development` profile now produces an installable APK. Windows local builds should use a short path (`C:\\bp`) and LongPathsEnabled.
+
+## 1.1.2 — 2026-09-04
+
+- Enable Expo OTA (EAS Update) for production: `updates.enabled: true`, `checkAutomatically: ON_LOAD`.
+- Android Play AAB bump: marketing version 1.1.2, `versionCode` 6.
+
 ## 1.1.1 â€” 2026-08-15
 
 - CSV import is live on History and Settings (same format as export).
