@@ -1,12 +1,12 @@
-# Privacy Policy — BP Tracker
+# Privacy Policy — Quenly
 
 **Last updated:** August 14, 2026  
-**App:** BP Tracker (com.briteenceladus.bptracker)  
+**App:** Quenly (com.briteenceladus.bptracker)  
 **Developer:** BriteEnceladus
 
 ## Summary
 
-BP Tracker is a **fully offline, privacy-first** personal health tracking app.  
+Quenly is a **fully offline, privacy-first** personal health tracking app.  
 **We collect no data.** Everything stays on your device. There is no account, no server, and no analytics.
 
 ---
@@ -28,7 +28,7 @@ This data is encrypted on-device using AES-256-GCM before it is written to stora
 - No device identifiers sent anywhere
 - No location data used or transmitted
 - No analytics, crash reporting, or advertising SDKs
-- No health data is uploaded to us. There is no BP Tracker account or analytics backend.
+- No health data is uploaded to us. There is no Quenly account or analytics backend.
 - No third-party trackers or advertising SDKs.
 
 **Optional Grok insights (off by default):** if you explicitly opt in and paste your own xAI API key, the app can send a *minimal anonymized summary* (latest systolic/diastolic/pulse, category, 7-day averages, 14-day category counts, and a coarse trend). Notes, exact timestamps, names, and identifiers are not included. That request goes from your device to `api.x.ai` using your key. Turn the feature off and remove the key at any time.
@@ -50,11 +50,11 @@ No other sensitive permissions are required.
 
 ## 5. Children’s privacy
 
-BP Tracker is not directed at children under 13. We do not knowingly collect any data from children.
+Quenly is not directed at children under 13. We do not knowingly collect any data from children.
 
 ## 6. Not a medical device
 
-BP Tracker is a **personal wellness and tracking tool only**.  
+Quenly is a **personal wellness and tracking tool only**.  
 It is **not** a regulated medical device.  
 It does **not** diagnose, treat, cure, or prevent any disease.  
 It is **not** a substitute for professional medical advice, diagnosis, or treatment.

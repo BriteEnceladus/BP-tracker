@@ -18,7 +18,7 @@ export const EnvProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [grokApiKey, setGrokApiKeyState] = useState<string | null>(null);
 
   const extra = Constants.expoConfig?.extra || {};
-  const appName = extra.appName || 'BP Tracker';
+  const appName = extra.appName || 'Quenly';
   const version = extra.version || '1.0.0';
   const grokApiBase = extra.grokApiBase || 'https://api.x.ai/v1';
 

@@ -1,10 +1,10 @@
-# Legal & App Store Compliance — BP Tracker
+# Legal & App Store Compliance — Quenly
 
 ## Regulated Medical Device Status
 
 **Declaration: No — this app is not a regulated medical device.**
 
-BP Tracker is a general wellness / personal health tracking application. It:
+Quenly is a general wellness / personal health tracking application. It:
 
 - Does not diagnose, treat, mitigate, or prevent disease
 - Does not make clinical decisions or recommendations that replace a clinician

@@ -43,7 +43,7 @@ export function LatestReadingWidget({ snapshot }: { snapshot: WidgetSnapshot }) 
       accessibilityLabel={
         show
           ? `Latest ${showBp ? `blood pressure ${snapshot.systolic} over ${snapshot.diastolic}` : ''} ${showGlu ? `glucose ${snapshot.glucoseMgdl}` : ''}`.trim()
-          : 'BP Tracker. Open to log a reading.'
+          : 'Quenly. Open to log a reading.'
       }
       style={{
         height: 'match_parent',
@@ -55,7 +55,7 @@ export function LatestReadingWidget({ snapshot }: { snapshot: WidgetSnapshot }) 
       }}
     >
       <TextWidget
-        text="BP Tracker"
+        text="Quenly"
         style={{ color: '#14B8A6', fontSize: 12, fontWeight: '600' }}
       />
       {show ? (

@@ -25,7 +25,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
     const timer = setTimeout(() => {
       reject(
         new Error(
-          `${label} took too long. Close Expo Go if that is what you opened, and use the BP Tracker app from your home screen.`
+          `${label} took too long. Close Expo Go if that is what you opened, and use the Quenly app from your home screen.`
         )
       );
     }, ms);
@@ -169,7 +169,7 @@ export function LockScreen() {
           <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
             <Feather name="shield" size={32} color={colors.primary} />
           </View>
-          <Text style={[styles.appName, { color: colors.primary }]}>BP Tracker</Text>
+          <Text style={[styles.appName, { color: colors.primary }]}>Quenly</Text>
           <Text style={[styles.title, { color: colors.foreground }]}>Welcome back</Text>
 
           <TouchableOpacity
@@ -264,7 +264,7 @@ export function LockScreen() {
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           {mode === 'setup'
             ? 'Choose a password you will remember. There is no reset.'
-            : 'Enter your password to open BP Tracker.'}
+            : 'Enter your password to open Quenly.'}
         </Text>
 
         <View style={styles.form}>

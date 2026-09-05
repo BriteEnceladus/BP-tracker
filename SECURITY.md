@@ -1,8 +1,8 @@
-# Security Model for BP Tracker
+# Security Model for Quenly
 
 **Version**: Post per-reading encryption implementation (2026)
 
-BP Tracker is a fully client-side, privacy-first health data application. All sensitive user data is encrypted on the device using strong cryptography. There is no server, no account, and no cloud component.
+Quenly is a fully client-side, privacy-first health data application. All sensitive user data is encrypted on the device using strong cryptography. There is no server, no account, and no cloud component.
 
 ## Core Cryptography
 

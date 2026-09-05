@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "BP Tracker",
+    "name": "Quenly",
     "slug": "bp-tracker",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "description": "A secure, standalone blood pressure and heart rate tracking app with local storage, charts, history, and CSV export. Built with Expo for privacy-focused wellness tracking.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -31,12 +31,12 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.briteenceladus.bptracker",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Unlock BP Tracker with Face ID for convenience. Your master password remains the root of trust."
+        "NSFaceIDUsageDescription": "Unlock Quenly with Face ID for convenience. Your master password remains the root of trust."
       }
     },
     "android": {
       "package": "com.briteenceladus.bptracker",
-      "versionCode": 9,
+      "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0F172A"
@@ -49,8 +49,8 @@
     },
     "web": {
       "favicon": "./assets/images/favicon.png",
-      "name": "BP Tracker",
-      "shortName": "BPTrack",
+      "name": "Quenly",
+      "shortName": "Quenly",
       "themeColor": "#1E7ADB",
       "backgroundColor": "#0F172A",
       "description": "Log and monitor your blood pressure and heart rate",
@@ -95,7 +95,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Allow BP Tracker to use Face ID for convenient unlock. Your master password is still required for full security."
+          "faceIDPermission": "Allow Quenly to use Face ID for convenient unlock. Your master password is still required for full security."
         }
       ],
       [
@@ -104,7 +104,7 @@
           "widgets": [
             {
               "name": "LatestReading",
-              "label": "BP Tracker",
+              "label": "Quenly",
               "description": "Latest blood pressure. Numbers only if you opt in; clears when the app locks.",
               "minWidth": "180dp",
               "minHeight": "80dp",
@@ -117,7 +117,7 @@
             {
               "name": "QuickLog",
               "label": "Quick Log",
-              "description": "Open BP Tracker to log a reading now. No numbers on the home screen.",
+              "description": "Open Quenly to log a reading now. No numbers on the home screen.",
               "minWidth": "110dp",
               "minHeight": "40dp",
               "targetCellWidth": 2,
@@ -135,8 +135,8 @@
       "reactCompiler": true
     },
     "extra": {
-      "appName": "BP Tracker",
-      "version": "1.1.4",
+      "appName": "Quenly",
+      "version": "1.1.5",
       "eas": {
         "projectId": "01be2be0-2ae4-4bee-9974-3620e64ef682"
       }

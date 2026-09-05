@@ -1,4 +1,4 @@
-# BP Tracker
+# Quenly
 
 A secure, standalone blood pressure and heart rate tracking app built with Expo.
 

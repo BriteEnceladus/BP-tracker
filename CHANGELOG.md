@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 1.1.5: User-facing display name is now Quenly (dev/internal name was BP Tracker). Version 1.1.5 / android.versionCode 10.
 - 1.1.4 Play password setup: no longer depends on QuickCrypto native loading. Falls back to JS AES-256-GCM via `@noble/ciphers` + PBKDF2 (100k) via `@noble/hashes` when the native module is absent (same EncryptedData shape). Optional follow-up: QuickCrypto 1.x + nitro — not upgraded in this pass.
 - 1.1.3 Play hotfix: install QuickCrypto in `index.ts` before Expo Router boots so password setup works on a store APK. Rebuild the production AAB — 1.1.1 cannot receive this over OTA (OTA was off in that binary).
 

@@ -1,4 +1,4 @@
-# BP Tracker App Icons & Splash Art
+# Quenly App Icons & Splash Art
 
 Professional assets generated for the app.
 

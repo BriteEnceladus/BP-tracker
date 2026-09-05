@@ -16,7 +16,7 @@ export default function OnboardingScreen() {
     {
       icon: 'shield',
       title: 'Your data stays on this phone',
-      description: 'Readings are stored here. There is no BP Tracker account or cloud sync.',
+      description: 'Readings are stored here. There is no Quenly account or cloud sync.',
       highlight: 'On this device',
     },
     {
@@ -34,7 +34,7 @@ export default function OnboardingScreen() {
     {
       icon: 'alert-circle',
       title: 'Not a medical device',
-      description: 'BP Tracker is a personal log. It does not diagnose or treat. Share trends with your clinician.',
+      description: 'Quenly is a personal log. It does not diagnose or treat. Share trends with your clinician.',
       highlight: 'Wellness only',
     },
     {

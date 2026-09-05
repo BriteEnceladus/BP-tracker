@@ -8,7 +8,7 @@ import {
 } from './bpUtils';
 
 export const PDF_DISCLAIMER =
-  'BP Tracker is a personal wellness log, not a medical device. This report does not diagnose or treat any condition. Share it with a qualified clinician. Notes are omitted to reduce accidental disclosure of extra personal detail.';
+  'Quenly is a personal wellness log, not a medical device. This report does not diagnose or treat any condition. Share it with a qualified clinician. Notes are omitted to reduce accidental disclosure of extra personal detail.';
 
 export type PdfMed = {
   name: string;
@@ -192,11 +192,11 @@ export function buildPdfHtml(readings: BPReading[], options: PdfReportOptions = 
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>BP Tracker Year in Review</title>
+  <title>Quenly Year in Review</title>
   <style>${sharedStyles()}</style>
 </head>
 <body>
-  <h1>BP Tracker Year in Review</h1>
+  <h1>Quenly Year in Review</h1>
   <p class="muted">Last 12 months · generated ${escapeHtml(now.toLocaleString())} · built on this device · notes omitted</p>
   <div class="cards">
     <div class="card"><div class="muted">Avg systolic</div><div class="value">${yearAvg.avgSystolic || '—'}</div></div>

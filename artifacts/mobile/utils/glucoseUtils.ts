@@ -4,7 +4,7 @@ import type { GlucoseContextTag, GlucoseDisplayUnit, GlucoseReading } from '../s
 export const MGDL_PER_MMOL = 18.0182;
 
 export const GLUCOSE_DISCLAIMER =
-  'This is not medical advice. Discuss readings with a qualified clinician. BP Tracker is not a medical device and does not diagnose.';
+  'This is not medical advice. Discuss readings with a qualified clinician. Quenly is not a medical device and does not diagnose.';
 
 export type GlucoseBand = 'dangerLow' | 'low' | 'inRange' | 'elevated' | 'high' | 'dangerHigh';
 

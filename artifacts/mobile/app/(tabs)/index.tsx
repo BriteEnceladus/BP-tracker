@@ -149,7 +149,7 @@ export default function DashboardScreen() {
             Good morning
           </Text>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            BP Tracker
+            Quenly
           </Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>

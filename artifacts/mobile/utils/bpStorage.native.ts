@@ -98,7 +98,7 @@ export async function authenticateWithBiometric(): Promise<string | null> {
     // requireAuthentication on the item will trigger the system biometric prompt
     const password = await SecureStore.getItemAsync(BIO_PASSWORD_KEY, {
       requireAuthentication: true,
-      authenticationPrompt: 'Unlock BP Tracker',
+      authenticationPrompt: 'Unlock Quenly',
     });
     return password;
   } catch {

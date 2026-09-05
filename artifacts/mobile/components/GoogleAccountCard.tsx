@@ -11,7 +11,7 @@ export function GoogleAccountCard() {
   const confirmSignOut = () => {
     Alert.alert(
       'Sign out of Google?',
-      'This only signs Google out on this phone. Your readings stay in BP Tracker.',
+      'This only signs Google out on this phone. Your readings stay in Quenly.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },

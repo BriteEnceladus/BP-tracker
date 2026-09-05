@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Zod schemas for BP Tracker.
+ * Zod schemas for Quenly.
  * All runtime validation + inferred TS types live here for consistency.
  */
 

@@ -47,7 +47,7 @@ export async function decryptBackup(
   file: EncryptedBackupFile
 ): Promise<BackupPlaintext> {
   if (!isEncryptedBackupFile(file)) {
-    throw new Error('This file is not a BP Tracker encrypted backup');
+    throw new Error('This file is not a Quenly encrypted backup');
   }
   const plaintext = await decryptData(key, file.encrypted);
   const parsed = JSON.parse(plaintext) as BackupPlaintext;

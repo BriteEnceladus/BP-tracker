@@ -139,7 +139,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const purchase = useCallback(async () => {
     // HOOK: Start subscription — e.g. Purchases.purchasePackage then applyEntitlement(true, id)
     Alert.alert(
-      'BP Tracker Pro',
+      'Quenly Pro',
       'Subscription checkout is not connected yet.\n\nUse the Mock Pro toggle in Settings while developing. When your backend or store IAP is ready, wire it into PremiumContext.purchase().',
       [{ text: 'OK' }]
     );
@@ -162,7 +162,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
           : String(feature);
 
       Alert.alert(
-        'BP Tracker Pro',
+        'Quenly Pro',
         `${label} is available with Pro.\n\nPro unlocks full history from your first log, import, encrypted backup/restore, PDF reports, and reminders.\n\nYour older logs stay on this device even if Pro is off. Local insights stay free.`,
         [
           { text: 'Not now', style: 'cancel' },

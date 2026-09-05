@@ -229,7 +229,7 @@ export default function SettingsScreen() {
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       if (message !== 'No file selected') {
-        Alert.alert('Import failed', 'Could not read that file. Use a CSV exported from BP Tracker.');
+        Alert.alert('Import failed', 'Could not read that file. Use a CSV exported from Quenly.');
       }
     }
   };
@@ -276,7 +276,7 @@ export default function SettingsScreen() {
       const raw = await pickBackupFile();
       const parsed = JSON.parse(raw);
       if (!isEncryptedBackupFile(parsed)) {
-        Alert.alert('Wrong file', 'That is not a BP Tracker encrypted backup.');
+        Alert.alert('Wrong file', 'That is not a Quenly encrypted backup.');
         return;
       }
       const data = await decryptBackup(cryptoKey as SessionCryptoKey, parsed);
@@ -368,7 +368,7 @@ export default function SettingsScreen() {
         <View style={[styles.notice, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Feather name="alert-circle" size={18} color={colors.primary} />
           <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>
-            BP Tracker is a personal wellness tracking tool only. It is{' '}
+            Quenly is a personal wellness tracking tool only. It is{' '}
             <Text style={{ fontWeight: '700', color: colors.foreground }}>not a regulated medical device</Text>
             {' '}and does not diagnose, treat, or replace professional medical advice.
           </Text>
@@ -639,7 +639,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>BP Tracker Pro</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quenly Pro</Text>
         <View style={styles.row}>
           <Text style={{ color: colors.foreground }}>Status</Text>
           <Text style={{ color: isPremium ? colors.normal : colors.mutedForeground, fontWeight: '600' }}>
