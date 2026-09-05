@@ -15,26 +15,54 @@ import Constants from 'expo-constants';
 // Polyfill random values if not present
 import 'react-native-get-random-values';
 
+type SubtleSurface = {
+  importKey: (
+    format: string,
+    keyData: BufferSource,
+    algorithm: AlgorithmIdentifier,
+    extractable: boolean,
+    keyUsages: KeyUsage[]
+  ) => Promise<CryptoKey>;
+  deriveKey: (
+    algorithm: Pbkdf2Params,
+    baseKey: CryptoKey,
+    derivedKeyType: AesKeyGenParams,
+    extractable: boolean,
+    keyUsages: KeyUsage[]
+  ) => Promise<CryptoKey>;
+  encrypt: (
+    algorithm: AesGcmParams,
+    key: CryptoKey,
+    data: BufferSource
+  ) => Promise<ArrayBuffer>;
+  decrypt: (
+    algorithm: AesGcmParams,
+    key: CryptoKey,
+    data: BufferSource
+  ) => Promise<ArrayBuffer>;
+};
+
+type NativeCryptoApi = {
+  getRandomValues: (arr: Uint8Array) => Uint8Array;
+  subtle: SubtleSurface;
+};
+
 type AnyCrypto = {
   getRandomValues?: (arr: Uint8Array) => Uint8Array;
-  subtle?: {
-    importKey?: Function;
-    deriveKey?: Function;
-    encrypt?: Function;
-    decrypt?: Function;
-  };
+  subtle?: Partial<SubtleSurface>;
   install?: () => void;
   webcrypto?: AnyCrypto;
 };
 
-function isUsableSubtle(c: AnyCrypto | undefined | null): boolean {
+function isUsableSubtle(c: AnyCrypto | undefined | null): c is NativeCryptoApi {
   return Boolean(
     c &&
       typeof c.getRandomValues === 'function' &&
       c.subtle &&
       typeof c.subtle.importKey === 'function' &&
       typeof c.subtle.deriveKey === 'function' &&
-      typeof c.subtle.encrypt === 'function'
+      typeof c.subtle.encrypt === 'function' &&
+      typeof c.subtle.decrypt === 'function'
   );
 }
 
@@ -50,7 +78,7 @@ function pickQuickCryptoSurface(): AnyCrypto | null {
     }
   }
   const after = (global as unknown as { crypto?: AnyCrypto }).crypto;
-  if (isUsableSubtle(after)) return after ?? null;
+  if (isUsableSubtle(after)) return after;
   if (isUsableSubtle(qc)) return qc;
   if (qc?.subtle) return qc;
   return qc ?? null;
@@ -61,7 +89,7 @@ function pickQuickCryptoSurface(): AnyCrypto | null {
  * module loads. Replacing only when crypto is undefined left AES-GCM missing on
  * real APKs and made setup look like an Expo Go failure.
  */
-function installNativeCrypto(): AnyCrypto | null {
+function installNativeCrypto(): NativeCryptoApi | null {
   const surface = pickQuickCryptoSurface();
   const g = global as unknown as { crypto?: AnyCrypto };
 
@@ -76,12 +104,12 @@ function installNativeCrypto(): AnyCrypto | null {
     }
   }
 
-  if (isUsableSubtle(g.crypto)) return g.crypto ?? null;
+  if (isUsableSubtle(g.crypto)) return g.crypto;
   if (isUsableSubtle(surface)) return surface;
-  return g.crypto ?? surface;
+  return null;
 }
 
-const nativeCrypto = installNativeCrypto();
+let nativeCrypto: NativeCryptoApi | null = installNativeCrypto();
 
 export type SessionCryptoKey = CryptoKey;
 
@@ -101,24 +129,22 @@ function runningInExpoGo(): boolean {
   return Constants.appOwnership === 'expo';
 }
 
-function ensureNativeCrypto(): void {
-  const c = (isUsableSubtle(nativeCrypto) ? nativeCrypto : installNativeCrypto()) as AnyCrypto | null;
-  if (!isUsableSubtle(c)) {
-    if (runningInExpoGo()) {
-      throw new Error(
-        'This screen is running inside Expo Go, which cannot encrypt data. Open the installed BP Tracker app from your home screen (not Expo Go), or install the APK from EAS / Play.'
-      );
-    }
+function ensureNativeCrypto(): NativeCryptoApi {
+  if (isUsableSubtle(nativeCrypto)) return nativeCrypto;
+  nativeCrypto = installNativeCrypto();
+  if (isUsableSubtle(nativeCrypto)) return nativeCrypto;
+  if (runningInExpoGo()) {
     throw new Error(
-      'Encryption is not ready in this install. Uninstall Expo Go copies of the project, open the BP Tracker icon from your home screen, and if it still fails install a fresh preview/production APK (not a QR scan into Expo Go).'
+      'This screen is running inside Expo Go, which cannot encrypt data. Open the installed BP Tracker app from your home screen (not Expo Go), or install the APK from EAS / Play.'
     );
   }
+  throw new Error(
+    'Encryption is not ready in this install. Uninstall Expo Go copies of the project, open the BP Tracker icon from your home screen, and if it still fails install a fresh preview/production APK (not a QR scan into Expo Go).'
+  );
 }
 
-function cryptoApi(): AnyCrypto {
-  ensureNativeCrypto();
-  const c = (isUsableSubtle(nativeCrypto) ? nativeCrypto : (global as unknown as { crypto: AnyCrypto }).crypto);
-  return c;
+function cryptoApi(): NativeCryptoApi {
+  return ensureNativeCrypto();
 }
 
 // ---------- Base64 helpers (binary safe) ----------
@@ -153,14 +179,14 @@ function base64ToBuffer(base64: string): ArrayBuffer {
 
 export function generateSalt(): string {
   const c = cryptoApi();
-  const salt = c.getRandomValues!(new Uint8Array(16));
+  const salt = c.getRandomValues(new Uint8Array(16));
   return bufferToBase64(salt.buffer as ArrayBuffer);
 }
 
 export async function deriveKey(password: string, saltBase64: string): Promise<CryptoKey> {
   const c = cryptoApi();
   const enc = new TextEncoder();
-  const keyMaterial = await c.subtle!.importKey(
+  const keyMaterial = await c.subtle.importKey(
     'raw',
     enc.encode(password),
     'PBKDF2',
@@ -168,7 +194,7 @@ export async function deriveKey(password: string, saltBase64: string): Promise<C
     ['deriveKey']
   );
 
-  return c.subtle!.deriveKey(
+  return c.subtle.deriveKey(
     {
       name: 'PBKDF2',
       salt: base64ToBuffer(saltBase64),
@@ -184,9 +210,9 @@ export async function deriveKey(password: string, saltBase64: string): Promise<C
 
 export async function encryptData(key: CryptoKey, plaintext: string): Promise<EncryptedData> {
   const c = cryptoApi();
-  const iv = c.getRandomValues!(new Uint8Array(12));
+  const iv = c.getRandomValues(new Uint8Array(12));
   const enc = new TextEncoder();
-  const ciphertext = await c.subtle!.encrypt(
+  const ciphertext = await c.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
     enc.encode(plaintext)
@@ -199,7 +225,7 @@ export async function encryptData(key: CryptoKey, plaintext: string): Promise<En
 
 export async function decryptData(key: CryptoKey, data: EncryptedData): Promise<string> {
   const c = cryptoApi();
-  const plaintext = await c.subtle!.decrypt(
+  const plaintext = await c.subtle.decrypt(
     { name: 'AES-GCM', iv: base64ToBuffer(data.iv) },
     key,
     base64ToBuffer(data.payload)

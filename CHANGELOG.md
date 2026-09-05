@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Type-narrow native crypto API after QuickCrypto install so tsc no longer flags crypto.native.ts subtle calls.
+
 - Quieter lock, onboarding, Settings, and dashboard copy. Encryption is unchanged; AES/PBKDF badges and “vault” marketing are removed from the UI.
 
 - Password setup on downloaded APKs: install react-native-quick-crypto over a stub global.crypto (getRandomValues-only). Setup no longer fails with an Expo Go message on a real Play/EAS binary. Expo Go still cannot encrypt; the error now says to open the BP Tracker icon instead.
