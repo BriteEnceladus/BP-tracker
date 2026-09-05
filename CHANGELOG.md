@@ -2,15 +2,7 @@
 
 ## Unreleased
 
-- Type-narrow native crypto API after QuickCrypto install so tsc no longer flags crypto.native.ts subtle calls.
-
-- Quieter lock, onboarding, Settings, and dashboard copy. Encryption is unchanged; AES/PBKDF badges and “vault” marketing are removed from the UI.
-
-- Password setup on downloaded APKs: install react-native-quick-crypto over a stub global.crypto (getRandomValues-only). Setup no longer fails with an Expo Go message on a real Play/EAS binary. Expo Go still cannot encrypt; the error now says to open the BP Tracker icon instead.
-- Launch crash fix: do not mount Google useIdTokenAuthRequest when no client IDs are set; wrap GoogleAuthProvider in ErrorBoundary so auth cannot brick cold start.
-- Lock-screen harden: opaque lock overlay, ErrorBoundary around the unlocked tree (prevents CryptoProvider remount stuck-on-password after setup), AppState auto-lock only on `background` (not `inactive`) on Android.
-- Optional Sign in with Google in Settings (identity only). Stores Google sub/email locally in SecureStore. Does not upload readings, notes, or the master password. Requires EXPO_PUBLIC_GOOGLE_* client IDs and a real APK. App still works signed out.
-- OTA (EAS Update) enabled for further updates: `updates.enabled: true` and `checkAutomatically: ON_LOAD`. Same Expo Update URL; `runtimeVersion.policy` remains `appVersion`. Production channel left intact.
+- 1.1.3 Play hotfix: install QuickCrypto in `index.ts` before Expo Router boots so password setup works on a store APK. Rebuild the production AAB — 1.1.1 cannot receive this over OTA (OTA was off in that binary).
 
 ## 1.1.2 — 2026-09-04
 
