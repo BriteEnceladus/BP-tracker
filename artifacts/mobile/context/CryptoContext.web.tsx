@@ -63,6 +63,17 @@ export function CryptoProvider({ children }: { children: React.ReactNode }) {
         setBiometricSupported(bioSupported);
         setBiometricEnrolled(bioEnrolled);
       })
+      .catch(async () => {
+        // SecureStore/biometric probe failures must not leave isSetup=false
+        // (false create-password UI over an existing vault).
+        try {
+          setIsSetup(await isEncryptionSetup());
+        } catch {
+          setIsSetup(true);
+        }
+        setBiometricSupported(false);
+        setBiometricEnrolled(false);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
