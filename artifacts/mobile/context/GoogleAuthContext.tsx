@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   createContext,
   useCallback,
   useContext,
@@ -33,6 +33,20 @@ type GoogleAuthContextType = {
 };
 
 const GoogleAuthContext = createContext<GoogleAuthContextType | undefined>(undefined);
+
+const disabledValue: GoogleAuthContextType = {
+  profile: null,
+  isReady: true,
+  isConfigured: false,
+  isBusy: false,
+  signIn: async () => {
+    Alert.alert(
+      'Google sign-in is not configured',
+      'Add EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, then rebuild the app. Health data is never sent to Google.'
+    );
+  },
+  signOut: async () => {},
+};
 
 function readClientIds() {
   return {
@@ -82,9 +96,14 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-export function GoogleAuthProvider({ children }: { children: ReactNode }) {
-  const ids = useMemo(readClientIds, []);
-  const isConfigured = Boolean(ids.androidClientId || ids.webClientId || ids.iosClientId);
+/** Auth-request hooks only mount when client IDs exist — empty config must not crash launch. */
+function GoogleAuthProviderConfigured({
+  children,
+  ids,
+}: {
+  children: ReactNode;
+  ids: ReturnType<typeof readClientIds>;
+}) {
   const [profile, setProfile] = useState<GoogleProfile | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
@@ -129,13 +148,6 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
   }, [response]);
 
   const signIn = useCallback(async () => {
-    if (!isConfigured) {
-      Alert.alert(
-        'Google sign-in is not configured',
-        'Add EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, then rebuild the app. Health data is never sent to Google.'
-      );
-      return;
-    }
     setIsBusy(true);
     try {
       await promptAsync();
@@ -144,7 +156,7 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsBusy(false);
     }
-  }, [isConfigured, promptAsync]);
+  }, [promptAsync]);
 
   const signOut = useCallback(async () => {
     await persistProfile(null);
@@ -156,7 +168,7 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
       value={{
         profile,
         isReady,
-        isConfigured,
+        isConfigured: true,
         isBusy: isBusy || !request,
         signIn,
         signOut,
@@ -164,6 +176,21 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
     >
       {children}
     </GoogleAuthContext.Provider>
+  );
+}
+
+export function GoogleAuthProvider({ children }: { children: ReactNode }) {
+  const ids = useMemo(readClientIds, []);
+  const isConfigured = Boolean(ids.androidClientId || ids.webClientId || ids.iosClientId);
+
+  if (!isConfigured) {
+    return (
+      <GoogleAuthContext.Provider value={disabledValue}>{children}</GoogleAuthContext.Provider>
+    );
+  }
+
+  return (
+    <GoogleAuthProviderConfigured ids={ids}>{children}</GoogleAuthProviderConfigured>
   );
 }
 

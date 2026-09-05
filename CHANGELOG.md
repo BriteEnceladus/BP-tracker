@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Launch crash fix: do not mount Google useIdTokenAuthRequest when no client IDs are set; wrap GoogleAuthProvider in ErrorBoundary so auth cannot brick cold start.
+
 - Lock-screen harden: opaque lock overlay, ErrorBoundary around the unlocked tree (prevents CryptoProvider remount stuck-on-password after setup), AppState auto-lock only on `background` (not `inactive`) on Android.
 - Optional Sign in with Google in Settings (identity only). Stores Google sub/email locally in SecureStore. Does not upload readings, notes, or the master password. Requires EXPO_PUBLIC_GOOGLE_* client IDs and a real APK. App still works signed out.
 - OTA (EAS Update) enabled for further updates: `updates.enabled: true` and `checkAutomatically: ON_LOAD`. Same Expo Update URL; `runtimeVersion.policy` remains `appVersion`. Production channel left intact.
