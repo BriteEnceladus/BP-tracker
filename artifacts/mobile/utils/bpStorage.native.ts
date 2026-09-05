@@ -13,6 +13,7 @@ import {
   createVerifier,
   verifyKey,
   type EncryptedData,
+  type SessionCryptoKey,
 } from './crypto.native';
 
 const SALT_KEY = 'bp_enc_salt';
@@ -29,7 +30,7 @@ export async function isEncryptionSetup(): Promise<boolean> {
   return !!(salt && verifier);
 }
 
-export async function setupEncryption(password: string): Promise<CryptoKey> {
+export async function setupEncryption(password: string): Promise<SessionCryptoKey> {
   const salt = generateSalt(); // sync
   const key = await deriveKey(password, salt);
   const verifier = await createVerifier(key);
@@ -40,7 +41,7 @@ export async function setupEncryption(password: string): Promise<CryptoKey> {
   return key;
 }
 
-export async function unlockWithPassword(password: string): Promise<CryptoKey | null> {
+export async function unlockWithPassword(password: string): Promise<SessionCryptoKey | null> {
   const salt = await SecureStore.getItemAsync(SALT_KEY);
   const verifierRaw = await SecureStore.getItemAsync(VERIFIER_KEY);
   if (!salt || !verifierRaw) return null;
@@ -56,9 +57,9 @@ export async function unlockWithPassword(password: string): Promise<CryptoKey | 
 }
 
 export async function changeEncryptionPassword(
-  oldKey: CryptoKey,
+  oldKey: SessionCryptoKey,
   newPassword: string
-): Promise<CryptoKey> {
+): Promise<SessionCryptoKey> {
   const newSalt = generateSalt();
   const newKey = await deriveKey(newPassword, newSalt);
   const newVerifier = await createVerifier(newKey);

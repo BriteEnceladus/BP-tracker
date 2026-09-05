@@ -23,10 +23,14 @@ function isNobleKey(key: SessionCryptoKey): key is NobleKey {
 }
 
 type SubtleSurface = {
-  importKey: (...args: never[]) => Promise<CryptoKey>;
-  deriveKey: (...args: never[]) => Promise<CryptoKey>;
-  encrypt: (...args: never[]) => Promise<ArrayBuffer>;
-  decrypt: (...args: never[]) => Promise<ArrayBuffer>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  importKey: (...args: any[]) => Promise<CryptoKey>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  deriveKey: (...args: any[]) => Promise<CryptoKey>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  encrypt: (...args: any[]) => Promise<ArrayBuffer>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  decrypt: (...args: any[]) => Promise<ArrayBuffer>;
 };
 
 type NativeCryptoApi = {
