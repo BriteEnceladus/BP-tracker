@@ -120,7 +120,7 @@ export default function SettingsScreen() {
     }
     Alert.alert(
       'Show latest reading on Home Screen?',
-      'This sits on your Home Screen unencrypted so the launcher can display it. Notes, names, and your password never leave the vault. The widget clears when the app locks.',
+      'Show latest reading on the Home Screen? Notes stay in the app. Numbers clear when the app locks.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -376,14 +376,10 @@ export default function SettingsScreen() {
       </ScreenEnter>
 
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Privacy & Security</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Privacy</Text>
         <View style={styles.row}>
           <Text style={{ color: colors.foreground }}>Data location</Text>
-          <Text style={{ color: colors.normal, fontWeight: '600' }}>On this device only</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={{ color: colors.foreground }}>Encryption</Text>
-          <Text style={{ color: colors.mutedForeground }}>AES-256-GCM</Text>
+          <Text style={{ color: colors.normal, fontWeight: '600' }}>This device</Text>
         </View>
         {biometricSupported ? (
           <View style={styles.row}>
@@ -443,10 +439,8 @@ export default function SettingsScreen() {
           />
         </View>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Pro, Android, opt-in. Requires a development client or EAS APK â€” not Expo Go. Latest SYS/DIA
-          and glucose (mg/dL) can sit on the launcher unencrypted; notes never leave the vault.
-          Locking the app clears the numbers. Tap the widget (or the small Quick Log tile) to open
-          the in-app Log form â€” not to type on the home screen.
+          Pro, Android. Latest SYS/DIA can show on the home screen. Notes stay in the app.
+          Locking clears the widget. Tap it to open Log.
         </Text>
       </View>
 
@@ -669,23 +663,22 @@ export default function SettingsScreen() {
           <Feather name="refresh-cw" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Free view is the last {FREE_HISTORY_DAYS} days. Every log stays encrypted on this device.
-          Turning Pro on or off never deletes history â€” Pro only changes what you can see and export.
-          Entitlement is a local flag, not health data. Checkout is not connected yet.
+          Free view is the last {FREE_HISTORY_DAYS} days. Older logs stay on this device.
+          Turning Pro on or off does not delete history. Checkout is not connected yet.
         </Text>
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Data</Text>
         <TouchableOpacity style={styles.row} onPress={createBackup}>
-          <Text style={{ color: colors.foreground }}>Encrypted backup</Text>
+          <Text style={{ color: colors.foreground }}>Backup</Text>
           <Feather name="shield" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Encrypted with your master key. Keep the file private. Restore only works with the same password.
+          Uses your password. Keep the file private.
         </Text>
         <TouchableOpacity style={styles.row} onPress={restoreBackup}>
-          <Text style={{ color: colors.foreground }}>Restore encrypted backup</Text>
+          <Text style={{ color: colors.foreground }}>Restore backup</Text>
           <Feather name="upload" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.row} onPress={exportPdf}>
@@ -701,7 +694,7 @@ export default function SettingsScreen() {
           <Feather name="upload" size={18} color={colors.mutedForeground} />
         </TouchableOpacity>
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Free CSV export is the last {FREE_HISTORY_DAYS} days. Import stores every valid row; older logs stay encrypted and appear with Pro. CSV and PDF are plaintext. Encrypted backup is the private option.
+          Free CSV export is the last {FREE_HISTORY_DAYS} days. Import stores every valid row. Older logs show with Pro.
         </Text>
         <TouchableOpacity style={styles.row} onPress={clearAllData}>
           <Text style={{ color: colors.crisis }}>Clear All Data</Text>

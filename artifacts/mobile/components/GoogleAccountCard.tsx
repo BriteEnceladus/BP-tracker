@@ -11,7 +11,7 @@ export function GoogleAccountCard() {
   const confirmSignOut = () => {
     Alert.alert(
       'Sign out of Google?',
-      'This only removes the Google account from this device. Blood pressure, glucose, and medications stay encrypted here. They are not in your Google account.',
+      'This only signs Google out on this phone. Your readings stay in BP Tracker.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
@@ -23,7 +23,7 @@ export function GoogleAccountCard() {
     <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Google account</Text>
       <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-        Optional identity only — it does not replace your master password or unlock encryption. Readings, notes, and your master password never leave this device and are never sent to Google.
+        Optional. Sign-in does not replace your app password. Readings are not sent to Google.
       </Text>
       {profile ? (
         <>

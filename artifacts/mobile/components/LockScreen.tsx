@@ -25,7 +25,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
     const timer = setTimeout(() => {
       reject(
         new Error(
-          `${label} timed out after ${ms / 1000}s. This usually means the native crypto module or SecureStore is unavailable (Expo Go cannot run this). Use a development build / EAS build.`
+          `${label} took too long. Close Expo Go if that is what you opened, and use the BP Tracker app from your home screen.`
         )
       );
     }, ms);
@@ -124,7 +124,7 @@ export function LockScreen() {
 
     setIsLoading(true);
     setError('');
-    setStatus(mode === 'setup' ? 'Deriving encryption key…' : 'Unlocking…');
+    setStatus(mode === 'setup' ? 'Saving...' : 'Unlocking...');
 
     try {
       if (mode === 'setup') {
@@ -211,8 +211,7 @@ export function LockScreen() {
           </Text>
 
           <Text style={[styles.bioWarning, { color: colors.mutedForeground }]}>
-            Biometrics are a convenience feature only. Your master password is still required for full
-            security.
+            You can still unlock with your password anytime.
           </Text>
 
           {bioError ? (
@@ -236,12 +235,6 @@ export function LockScreen() {
             </Text>
           </TouchableOpacity>
 
-          <View style={[styles.encryptedBadge, { backgroundColor: (colors.normal || '#22C55E') + '18' }]}>
-            <Feather name="shield" size={12} color={colors.normal || '#22C55E'} />
-            <Text style={[styles.encryptedText, { color: colors.normal || '#22C55E' }]}>
-              AES-256-GCM · PBKDF2 · 100,000 iterations
-            </Text>
-          </View>
         </View>
       </View>
     );
@@ -270,8 +263,8 @@ export function LockScreen() {
         </Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           {mode === 'setup'
-            ? 'This password encrypts all your health data with AES-256 on this device. It never leaves your phone and cannot be recovered.'
-            : 'Enter your master password to access your blood pressure readings.'}
+            ? 'Choose a password you will remember. There is no reset.'
+            : 'Enter your password to open BP Tracker.'}
         </Text>
 
         <View style={styles.form}>
@@ -470,23 +463,6 @@ export function LockScreen() {
             </TouchableOpacity>
           )}
         </View>
-
-        <View
-          style={[
-            styles.encryptedBadge,
-            { backgroundColor: (colors.normal || '#22C55E') + '18', marginTop: 28 },
-          ]}
-        >
-          <Feather name="shield" size={12} color={colors.normal || '#22C55E'} />
-          <Text style={[styles.encryptedText, { color: colors.normal || '#22C55E' }]}>
-            AES-256-GCM · PBKDF2 · 100,000 iterations
-          </Text>
-        </View>
-
-        {/* Platform hint for debugging */}
-        <Text style={[styles.platformHint, { color: colors.mutedForeground }]}>
-          {Platform.OS} · {Platform.OS === 'web' ? 'Web Crypto' : 'Native crypto'}
-        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -699,18 +675,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   usePasswordText: { fontSize: 14, fontWeight: '500' },
-  encryptedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  encryptedText: { fontSize: 11, fontWeight: '500' },
-  platformHint: {
-    marginTop: 16,
-    fontSize: 11,
-    opacity: 0.6,
-  },
 });
