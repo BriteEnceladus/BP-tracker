@@ -15,9 +15,9 @@ export default function OnboardingScreen() {
   const steps = [
     {
       icon: 'shield',
-      title: 'Your health data stays private',
-      description: 'Everything is stored securely on your device. No accounts, no cloud, no one else can see your readings.',
-      highlight: '100% Private',
+      title: 'Your data stays on this phone',
+      description: 'Readings are stored here. There is no BP Tracker account or cloud sync.',
+      highlight: 'On this device',
     },
     {
       icon: 'bar-chart-2',
@@ -27,9 +27,9 @@ export default function OnboardingScreen() {
     },
     {
       icon: 'lock',
-      title: 'Set a strong master password',
-      description: 'Your password encrypts every reading. There is no reset. Write it down somewhere safe.',
-      highlight: 'AES-256-GCM',
+      title: 'Choose a password',
+      description: 'You will need this password to open the app. There is no reset, so keep it somewhere you will remember.',
+      highlight: 'Your password',
     },
     {
       icon: 'alert-circle',

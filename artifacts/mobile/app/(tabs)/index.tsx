@@ -186,7 +186,7 @@ export default function DashboardScreen() {
         {!isPremium && hiddenOlderCount > 0 ? (
           <ScreenEnter delay={40}>
             <Text style={{ color: colors.mutedForeground, fontSize: 12, marginHorizontal: 20, marginTop: 12 }}>
-              Charts and recents use the last {FREE_HISTORY_DAYS} days. {hiddenOlderCount} older log(s) stay encrypted on this device and unlock with Pro.
+              Charts and recents use the last {FREE_HISTORY_DAYS} days. {hiddenOlderCount} older log(s) stay on this device and show with Pro.
             </Text>
           </ScreenEnter>
         ) : null}
