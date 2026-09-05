@@ -6,7 +6,6 @@ export default ({ config }) => {
     },
     updates: {
       ...config.updates,
-      // OTA enabled for production channel updates after this binary.
       enabled: true,
       url: 'https://u.expo.dev/01be2be0-2ae4-4bee-9974-3620e64ef682',
       checkAutomatically: 'ON_LOAD',
@@ -15,7 +14,7 @@ export default ({ config }) => {
     extra: {
       ...config.extra,
       appName: process.env.EXPO_PUBLIC_APP_NAME || 'BP Tracker',
-      version: process.env.EXPO_PUBLIC_VERSION || '1.1.2',
+      version: process.env.EXPO_PUBLIC_VERSION || '1.1.3',
     },
   };
 };
