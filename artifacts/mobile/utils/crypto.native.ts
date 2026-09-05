@@ -10,14 +10,78 @@
  */
 
 import QuickCrypto from 'react-native-quick-crypto';
+import Constants from 'expo-constants';
 
 // Polyfill random values if not present
 import 'react-native-get-random-values';
 
-// Make sure global crypto is available
-if (typeof global.crypto === 'undefined') {
-  (global as any).crypto = QuickCrypto;
+type AnyCrypto = {
+  getRandomValues?: (arr: Uint8Array) => Uint8Array;
+  subtle?: {
+    importKey?: Function;
+    deriveKey?: Function;
+    encrypt?: Function;
+    decrypt?: Function;
+  };
+  install?: () => void;
+  webcrypto?: AnyCrypto;
+};
+
+function isUsableSubtle(c: AnyCrypto | undefined | null): boolean {
+  return Boolean(
+    c &&
+      typeof c.getRandomValues === 'function' &&
+      c.subtle &&
+      typeof c.subtle.importKey === 'function' &&
+      typeof c.subtle.deriveKey === 'function' &&
+      typeof c.subtle.encrypt === 'function'
+  );
 }
+
+function pickQuickCryptoSurface(): AnyCrypto | null {
+  const qc = QuickCrypto as unknown as AnyCrypto;
+  if (isUsableSubtle(qc)) return qc;
+  if (isUsableSubtle(qc?.webcrypto)) return qc.webcrypto ?? null;
+  if (qc && typeof qc.install === 'function') {
+    try {
+      qc.install();
+    } catch {
+      // Expo Go or missing native binary — ensureNativeCrypto reports this.
+    }
+  }
+  const after = (global as unknown as { crypto?: AnyCrypto }).crypto;
+  if (isUsableSubtle(after)) return after ?? null;
+  if (isUsableSubtle(qc)) return qc;
+  if (qc?.subtle) return qc;
+  return qc ?? null;
+}
+
+/**
+ * RN / Expo often define a stub global.crypto (getRandomValues only) before this
+ * module loads. Replacing only when crypto is undefined left AES-GCM missing on
+ * real APKs and made setup look like an Expo Go failure.
+ */
+function installNativeCrypto(): AnyCrypto | null {
+  const surface = pickQuickCryptoSurface();
+  const g = global as unknown as { crypto?: AnyCrypto };
+
+  if (surface && !isUsableSubtle(g.crypto)) {
+    if (!g.crypto) {
+      g.crypto = surface;
+    } else {
+      if (surface.subtle) g.crypto.subtle = surface.subtle;
+      if (typeof g.crypto.getRandomValues !== 'function' && typeof surface.getRandomValues === 'function') {
+        g.crypto.getRandomValues = surface.getRandomValues.bind(surface);
+      }
+    }
+  }
+
+  if (isUsableSubtle(g.crypto)) return g.crypto ?? null;
+  if (isUsableSubtle(surface)) return surface;
+  return g.crypto ?? surface;
+}
+
+const nativeCrypto = installNativeCrypto();
 
 export type SessionCryptoKey = CryptoKey;
 
@@ -33,30 +97,28 @@ export interface PasswordStrength {
   feedback: string;
 }
 
-/**
- * Hard check that the native crypto surface is actually usable.
- * Throws a clear, actionable error instead of the cryptic
- * "undefined is not a function" that occurs in Expo Go or
- * when the development build was not rebuilt after adding
- * react-native-quick-crypto.
- */
+function runningInExpoGo(): boolean {
+  return Constants.appOwnership === 'expo';
+}
+
 function ensureNativeCrypto(): void {
-  const c = (global as any).crypto;
-  if (
-    !c ||
-    typeof c.getRandomValues !== 'function' ||
-    !c.subtle ||
-    typeof c.subtle.importKey !== 'function' ||
-    typeof c.subtle.deriveKey !== 'function' ||
-    typeof c.subtle.encrypt !== 'function'
-  ) {
+  const c = (isUsableSubtle(nativeCrypto) ? nativeCrypto : installNativeCrypto()) as AnyCrypto | null;
+  if (!isUsableSubtle(c)) {
+    if (runningInExpoGo()) {
+      throw new Error(
+        'This screen is running inside Expo Go, which cannot encrypt data. Open the installed BP Tracker app from your home screen (not Expo Go), or install the APK from EAS / Play.'
+      );
+    }
     throw new Error(
-      'Native crypto module is unavailable. ' +
-        'BP Tracker requires a development build or EAS build. ' +
-        'Expo Go does not support react-native-quick-crypto. ' +
-        'Run: npx expo run:android  (or use the Build-Apk.ps1 script)'
+      'Encryption is not ready in this install. Uninstall Expo Go copies of the project, open the BP Tracker icon from your home screen, and if it still fails install a fresh preview/production APK (not a QR scan into Expo Go).'
     );
   }
+}
+
+function cryptoApi(): AnyCrypto {
+  ensureNativeCrypto();
+  const c = (isUsableSubtle(nativeCrypto) ? nativeCrypto : (global as unknown as { crypto: AnyCrypto }).crypto);
+  return c;
 }
 
 // ---------- Base64 helpers (binary safe) ----------
@@ -66,7 +128,7 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
   const chunkSize = 0x8000;
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode.apply(null, chunk as any);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
   }
   return btoa(binary);
 }
@@ -90,15 +152,15 @@ function base64ToBuffer(base64: string): ArrayBuffer {
 }
 
 export function generateSalt(): string {
-  ensureNativeCrypto();
-  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const c = cryptoApi();
+  const salt = c.getRandomValues!(new Uint8Array(16));
   return bufferToBase64(salt.buffer as ArrayBuffer);
 }
 
 export async function deriveKey(password: string, saltBase64: string): Promise<CryptoKey> {
-  ensureNativeCrypto();
+  const c = cryptoApi();
   const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
+  const keyMaterial = await c.subtle!.importKey(
     'raw',
     enc.encode(password),
     'PBKDF2',
@@ -106,7 +168,7 @@ export async function deriveKey(password: string, saltBase64: string): Promise<C
     ['deriveKey']
   );
 
-  return crypto.subtle.deriveKey(
+  return c.subtle!.deriveKey(
     {
       name: 'PBKDF2',
       salt: base64ToBuffer(saltBase64),
@@ -121,28 +183,28 @@ export async function deriveKey(password: string, saltBase64: string): Promise<C
 }
 
 export async function encryptData(key: CryptoKey, plaintext: string): Promise<EncryptedData> {
-  ensureNativeCrypto();
-  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
+  const c = cryptoApi();
+  const iv = c.getRandomValues!(new Uint8Array(12));
   const enc = new TextEncoder();
-  const ciphertext = await crypto.subtle.encrypt(
+  const ciphertext = await c.subtle!.encrypt(
     { name: 'AES-GCM', iv },
     key,
     enc.encode(plaintext)
   );
   return {
     iv: bufferToBase64(iv.buffer as ArrayBuffer),
-    payload: bufferToBase64(ciphertext),
+    payload: bufferToBase64(ciphertext as ArrayBuffer),
   };
 }
 
 export async function decryptData(key: CryptoKey, data: EncryptedData): Promise<string> {
-  ensureNativeCrypto();
-  const plaintext = await crypto.subtle.decrypt(
+  const c = cryptoApi();
+  const plaintext = await c.subtle!.decrypt(
     { name: 'AES-GCM', iv: base64ToBuffer(data.iv) },
     key,
     base64ToBuffer(data.payload)
   );
-  return new TextDecoder().decode(plaintext);
+  return new TextDecoder().decode(plaintext as ArrayBuffer);
 }
 
 const VERIFIER_TEXT = 'BP_TRACKER_V1_OK';
@@ -162,8 +224,7 @@ export async function verifyKey(key: CryptoKey, verifier: EncryptedData): Promis
 
 export function getPasswordStrength(password: string): PasswordStrength {
   let score = 0;
-  const hasMinLength = password.length >= 12;
-  if (hasMinLength) score++;
+  if (password.length >= 12) score++;
   if (password.length >= 16) score++;
   if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;
