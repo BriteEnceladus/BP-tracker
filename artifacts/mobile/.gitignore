@@ -40,3 +40,7 @@ yarn-error.log*
 
 # Keep example
 !.env.example
+
+# EAS / Play submit secrets (never commit)
+.eas-private/
+
